@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "apps/streamer",
+    "apps/indexer",
+    "apps/api",
+]
+
+resolver = "2"
