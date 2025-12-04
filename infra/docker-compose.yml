@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    platform: linux/amd64
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: raydex-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: raydex-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"    # internal (for other containers like ClickHouse)
+      - "19092:19092"  # external (for your Rust app on WSL)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Two listeners: internal (PLAINTEXT) and external (PLAINTEXT_HOST)
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  clickhouse:
+    platform: linux/amd64
+    image: clickhouse/clickhouse-server:24.1
+    container_name: raydex-clickhouse
+    ports:
+      - "8123:8123"  # HTTP
+      - "9000:9000"  # native
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse:/docker-entrypoint-initdb.d
+
+  # prometheus:
+  #   platform: linux/amd64
+  #   image: prom/prometheus:latest
+  #   container_name: raydex-prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   depends_on:
+  #     - kafka
+  #     - clickhouse
+
+  # grafana:
+  #   platform: linux/amd64
+  #   image: grafana/grafana:latest
+  #   container_name: raydex-grafana
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - prometheus
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+
+volumes:
+  clickhouse-data:
