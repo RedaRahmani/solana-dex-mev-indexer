@@ -1,3 +1,58 @@
-fn main() {
-    println!("Hello, world!");
+use anyhow::Result;
+use clickhouse::{Client, Row};
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Row)]
+struct RawTxRow {
+    ts: String,              // we'll convert DateTime -> String in SQL
+    slot: u64,
+    signature: String,
+    tx_version: Option<u8>,
+    is_success: bool,
+    fee_lamports: u64,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    println!("Connecting to ClickHouse at http://localhost:8123 ...");
+
+    let client = Client::default()
+        .with_url("http://localhost:8123")
+        .with_database("solana"); // we created this DB earlier
+
+    let query = r#"
+        SELECT
+            toString(ts) AS ts,   -- convert DateTime -> String, alias to `ts`
+            slot,
+            signature,
+            tx_version,
+            is_success,
+            fee_lamports
+        FROM sol_raw_txs
+        ORDER BY ts DESC
+        LIMIT 10
+    "#;
+
+    println!("Running query:\n{query}");
+
+    let mut cursor = client
+        .query(query)
+        .fetch::<RawTxRow>()?;
+
+    println!("\nLast 10 raw txs:\n");
+
+    while let Some(row) = cursor.next().await? {
+        println!(
+            "[{}] slot={} sig={} tx_v={:?} success={} fee={}",
+            row.ts,
+            row.slot,
+            row.signature,
+            row.tx_version,
+            row.is_success,
+            row.fee_lamports,
+        );
+    }
+
+    println!("\nDone.");
+    Ok(())
 }
