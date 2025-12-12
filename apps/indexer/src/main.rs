@@ -10,6 +10,8 @@ struct RawTxRow {
     tx_version: Option<u8>,
     is_success: bool,
     fee_lamports: u64,
+    main_program: Option<String>,
+    program_ids: Vec<String>,
 }
 
 #[tokio::main]
@@ -27,10 +29,12 @@ async fn main() -> Result<()> {
             signature,
             tx_version,
             is_success,
-            fee_lamports
+            fee_lamports,
+            main_program,
+            program_ids
         FROM sol_raw_txs
         ORDER BY ts DESC
-        LIMIT 10
+        LIMIT 20
     "#;
 
     println!("Running query:\n{query}");
@@ -43,13 +47,15 @@ async fn main() -> Result<()> {
 
     while let Some(row) = cursor.next().await? {
         println!(
-            "[{}] slot={} sig={} tx_v={:?} success={} fee={}",
+            "[{}] slot={} sig={} tx_v={:?} success={} fee={} main_prog={:?} programs={:?}",
             row.ts,
             row.slot,
             row.signature,
             row.tx_version,
             row.is_success,
             row.fee_lamports,
+            row.main_program,
+            row.program_ids,
         );
     }
 
