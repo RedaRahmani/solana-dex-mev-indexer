@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use serde::Serialize;
-use tokio::time::sleep;
 use log::{error, info, warn};
 use futures::{SinkExt, StreamExt};
 use std::{collections::{HashMap, HashSet}, env, time::Duration};
@@ -115,33 +114,116 @@ fn extract_program_ids(account_keys: &[String], program_id_indexes: impl Iterato
 async fn main() -> Result<()> {
     setup_logging();
 
-    let producer = create_producer().await?;
     let endpoint = env::var("GEYSER_ENDPOINT")
         .map_err(|_| anyhow!("Missing GEYSER_ENDPOINT"))?;
+
+    let x_token = env::var("GEYSER_X_TOKEN").ok();
+
+    info!("Starting streamer (Yollowstone gRPC -> Kafka) topic={TOPIC} broker={KAFKA_BROKER}");
+    info!("GEYSER_ENDPOINT={endpoint}");
+    info!("Required accounts: {:?}", required_accounts());
+
+    let producer = create_producer().await?;
+
+    let mut client = GeyserGrpcClient::build_from_shared(endpoint)?
+        .x_token(x_token)?
+        .tls_config(ClientTlsConfig::new().with_native_roots())? //
+        .connect()
+        .await?;
     
+        let (mut sub_tx, mut sub_rx) = client.subscribe().await?;
 
-    for i in 0..3 {
-        let event = RawTxEvent {
-            schema_version: 1,
-            chain: "solana-mainnet".to_string(),
-            slot: 1000 + i,
-            block_time: Some(1_700_000_000 + i as i64), // fake unix timestamps
-            signature: format!("FAKE_SIG_{i:04}"),
-            index_in_block: i as u32,
-            tx_version: Some(0), // pretend all are v0 for now
-            is_success: true,
-            fee_lamports: 5000,
-            compute_units_consumed: Some(200_000),
-            main_program: Some("RaydiumFake1111111111111111111111111".to_string()),
-            program_ids: vec![
-                "RaydiumFake1111111111111111111111111".to_string(),
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
-            ],
-        };
+        // Filter: only txs that mention REQUIRED_ACCOUNTS (default raydium AMM v4)
+        let mut tx_filters = HashMap::new();
+        tx_filters.insert(
+            "tx_filter".to_string(),
+            SubscribeRequestFilterTransactions {
+                vote: Some(false),
+                failed: Some(false),
+                account_include: vec![],
+                account_exclude: vec![],
+                account_required: required_accounts(),
+                ..Default::default() 
+            },
+        );
 
-        send_event(&producer, &event).await?;
-        sleep(Duration::from_millis(500)).await;
+        sub_tx
+            .send(SubscribeRequest{
+                transactions: tx_filters,
+                commitment: Some(CommitmentLevel::Processed as i32),
+                ..Default::default()
+            })
+            .await?;
+        
+        info!("Subscribed. Streaming...");
+
+        while let Some(msg) = sub_rx.next().await {
+            let msg = match msg {
+                Ok(m) => m,
+                Err(e) => {
+                    warn!("stream error : {e:?}");
+                    continue;
+                }
+            };
+
+            match msg.update_oneof {
+                Some(UpdateOneof::Transaction(tx)) => {
+                    // tx.transactions is where the actual tx lives (proto structure)
+                    let Some(tx_info) = tx.transaction else { continue };
+                    let signature = bs58::encode(&tx_info.signature).into_string();
+
+                    let slot = tx.slot;
+                    let chain = "solana-mainnet".to_string();
+                    let meta = tx_info.meta.as_ref();
+                    let is_success = meta.and_then(|m| m.err.as_ref()).is_none();
+                    let fee_lamports = meta.map(|m| m.fee).unwrap_or(0);
+                    
+                    // account keys
+                    let mut account_keys: Vec<String> = tx_info 
+                        .transaction
+                        .and_then(|t| t.message.as_ref())
+                        .map(|m| m.account_keys.iter().map(|k| bs58::encode(k).into_string()).collect())
+                        .unwrap_or_default();
+                    
+                    // program_id_index extraction from outer + inner instructions
+                    let outer_indexes = tx_info
+                    .transaction
+                    .as_ref()
+                    .and_then(|t| t.message.as_ref())
+                    .into_iter()
+                    .flat_map(|m| m.instructions.iter().map(|ix| ix.program_id_index));
+
+                let inner_indexes = meta
+                    .into_iter()
+                    .flat_map(|m| m.inner_instructions.iter())
+                    .flat_map(|ii| ii.instructions.iter().map(|ix| ix.program_id_index));
+
+                let program_ids = extract_program_ids(&account_keys, outer_indexes.chain(inner_indexes));
+                let main_program = pick_main_program(&program_ids);
+
+                let event = RawTxEvent {
+                    schema_version: 1,
+                    chain,
+                    slot,
+                    block_time: None,              // fill later (block stream / enrich)
+                    signature,
+                    index_in_block: 0,             // v0 placeholder
+                    tx_version: None,              // v0 placeholder
+                    is_success,
+                    fee_lamports,
+                    compute_units_consumed: None,  // v0 placeholder
+                    main_program,
+                    program_ids,
+                };
+
+                if let Err(e) = send_event(&producer, &event).await {
+                    error!("kafka send failed: {e:?}");
+                }
+            }
+            Some(UpdateOneof::Ping(_)) => {}
+            _ => {}
+        }
     }
-    println!("Done.");
+
     Ok(())
 }
