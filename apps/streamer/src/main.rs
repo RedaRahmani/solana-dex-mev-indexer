@@ -1,12 +1,25 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use serde::Serialize;
-use std::time::Duration;
 use tokio::time::sleep;
+use log::{error, info, warn};
+use futures::{SinkExt, StreamExt};
+use std::{collections::{HashMap, HashSet}, env, time::Duration};
+use tonic::transport::ClientTlsConfig;
+use yellowstone_grpc_client::GeyserGrpcClient;
+use yellowstone_grpc_proto::prelude::{
+    subscribe_update::UpdateOneof, CommitmentLevel, SubscribeRequest, SubscribeRequestFilterTransactions,
+};
+use bs58;
+
 
 const KAFKA_BROKER: &str = "localhost:19092";
 const TOPIC: &str = "sol_raw_txs";
+
+// default filter (Raydium AMM v4)
+const DEFAULT_REQUIRED_ACCOUNTS: &str = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+
 
 #[derive(Debug, Serialize)]
 struct RawTxEvent {
@@ -57,12 +70,55 @@ async fn send_event(
     Ok(())
 }
 
+fn setup_logging() {
+    let _ = env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info")
+    ).try_init();
+}
+
+fn required_accounts() -> Vec<String> {
+    env::var("REQUIRED_ACCOUNTS")
+        .unwrap_or_else(|_| DEFAULT_REQUIRED_ACCOUNTS.to_string())
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn pick_main_program(program_ids: &[String]) -> Option<String> {
+    let skip = [
+        "ComputeBudget111111111111111111111111111111",
+        "11111111111111111111111111111111", // System
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    ];
+    program_ids.iter().find(|p| !skip.contains(&p.as_str())).cloned()
+}
+
+fn extract_program_ids(account_keys: &[String], program_id_indexes: impl Iterator<Item = u32>) -> Vec<String> {
+    let mut out = vec![];
+    let mut seen = HashSet::new();
+    for idx in program_id_indexes {
+        let i = idx as usize;
+        if i < account_keys.len() {
+            let pid = &account_keys[i];
+            if seen.insert(pid.clone()) {
+                out.push(pid.clone());
+            }
+        }
+    }
+    out
+}
+
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("Starting streamer -> Kafka on {KAFKA_BROKER}, topic: {TOPIC}...");
+    setup_logging();
 
     let producer = create_producer().await?;
+    let endpoint = env::var("GEYSER_ENDPOINT")
+        .map_err(|_| anyhow!("Missing GEYSER_ENDPOINT"))?;
+    
 
     for i in 0..3 {
         let event = RawTxEvent {
