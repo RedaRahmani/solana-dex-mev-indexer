@@ -5,3 +5,5 @@ artifacts\
 /infra/validator
 .env
 .env.*
+data/
+*.jsonl

@@ -22,6 +22,8 @@ async fn main() -> Result<()> {
     setup_logging();
 
     let cfg: Config = config::load()?;
+    info!("using rpc_url={}", cfg.rpc_url);
+
     info!("streamer starting topic={} broker={}", cfg.kafka_topic, cfg.kafka_broker);
     info!(
         "endpoint={} commitment={:?} include_failed={} required_accounts={:?}",

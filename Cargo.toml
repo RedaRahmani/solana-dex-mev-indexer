@@ -2,7 +2,8 @@
 members = [
     "apps/streamer",
     "apps/indexer",
-    "apps/api",
+    "apps/api", "apps/backfill",
+    "apps/backfill"
 ]
 
 resolver = "2"
