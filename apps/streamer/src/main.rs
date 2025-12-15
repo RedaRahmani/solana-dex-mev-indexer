@@ -18,6 +18,7 @@ fn setup_logging() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     setup_logging();
 
     let cfg: Config = config::load()?;

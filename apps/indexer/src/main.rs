@@ -2,6 +2,8 @@ use anyhow::Result;
 use clickhouse::{Client, Row};
 use serde::Deserialize;
 
+
+
 #[derive(Debug, Deserialize, Row)]
 struct RawTxRow {
     ts: String,              // we'll convert DateTime -> String in SQL
@@ -16,6 +18,7 @@ struct RawTxRow {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     println!("Connecting to ClickHouse at http://localhost:8123 ...");
 
     let client = Client::default()

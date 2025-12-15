@@ -3,3 +3,5 @@ artifacts\
 /yellowstone-grpc
 /test-ledger
 /infra/validator
+.env
+.env.*
