@@ -1,0 +1,15 @@
+[package]
+name = "decoder"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+dotenvy = "0.15"
+env_logger = "0.11"
+log = "0.4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rdkafka = { version = "0.36", features = ["tokio"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }

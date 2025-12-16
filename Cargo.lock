@@ -1005,6 +1005,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "decoder"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "env_logger 0.11.8",
+ "log",
+ "rdkafka",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "derivation-path"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
