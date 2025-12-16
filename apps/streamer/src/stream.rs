@@ -84,6 +84,7 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
         .await?;
 
     info!("Subscribed. Streaming…");
+    m.connected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
     while let Some(msg) = sub_rx.next().await {
         let msg = match msg {
