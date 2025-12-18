@@ -1,7 +1,6 @@
 use anyhow::Result;
 use log::{info, warn};
 use rdkafka::consumer::Consumer;
-use rdkafka::message::Message;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;

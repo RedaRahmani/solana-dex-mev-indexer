@@ -1,5 +1,4 @@
 use crate::types::{SolBalanceDelta, TokenBalanceDelta};
-use anyhow::Result;
 use serde_json::Value;
 
 pub fn decode_sol_deltas(slot: u64, block_time: Option<i64>, sig: &str, tx: &Value) -> Vec<SolBalanceDelta> {
