@@ -45,58 +45,88 @@ pub fn decode_sol_deltas(slot: u64, block_time: Option<i64>, sig: &str, tx: &Val
 }
 
 pub fn decode_token_deltas(slot: u64, block_time: Option<i64>, sig: &str, tx: &Value) -> Vec<TokenBalanceDelta> {
-    // We compute deltas by (accountIndex + mint) comparing preTokenBalances/postTokenBalances.
-    // Values are strings; keep them strings for safety.
     use std::collections::HashMap;
 
-    let mut pre_map: HashMap<(u32, String), (Option<String>, String)> = HashMap::new();
-    let mut post_map: HashMap<(u32, String), (Option<String>, String)> = HashMap::new();
+    // key = (account_index, mint)
+    // value = (decimals, amount_base_units)
+    let mut pre_map: HashMap<(u32, String), (Option<u8>, u64)> = HashMap::new();
+    let mut post_map: HashMap<(u32, String), (Option<u8>, u64)> = HashMap::new();
 
-    let pre = tx.pointer("/meta/preTokenBalances").and_then(|v| v.as_array()).cloned().unwrap_or_default();
-    let post = tx.pointer("/meta/postTokenBalances").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    let pre = tx.pointer("/meta/preTokenBalances")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
 
-    for b in pre {
+    let post = tx.pointer("/meta/postTokenBalances")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let parse_amount_u64 = |b: &Value| -> u64 {
+        // uiTokenAmount.amount is a string integer in base units
+        let s = b.pointer("/uiTokenAmount/amount")
+            .and_then(|v| v.as_str())
+            .unwrap_or("0");
+        s.parse::<u64>().unwrap_or(0)
+    };
+
+    let parse_decimals = |b: &Value| -> Option<u8> {
+        b.pointer("/uiTokenAmount/decimals")
+            .and_then(|v| v.as_u64())
+            .and_then(|d| u8::try_from(d).ok())
+    };
+
+    for b in pre.iter() {
         let idx = b.get("accountIndex").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let mint = b.get("mint").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let owner = b.get("owner").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let amt = b.pointer("/uiTokenAmount/amount").and_then(|v| v.as_str()).unwrap_or("0").to_string();
-        if !mint.is_empty() {
-            pre_map.insert((idx, mint), (owner, amt));
-        }
+        if mint.is_empty() { continue; }
+
+        let amt = parse_amount_u64(b);
+        let decimals = parse_decimals(b);
+        pre_map.insert((idx, mint), (decimals, amt));
     }
 
-    for b in post {
+    for b in post.iter() {
         let idx = b.get("accountIndex").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let mint = b.get("mint").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let owner = b.get("owner").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let amt = b.pointer("/uiTokenAmount/amount").and_then(|v| v.as_str()).unwrap_or("0").to_string();
-        if !mint.is_empty() {
-            post_map.insert((idx, mint), (owner, amt));
+        if mint.is_empty() { continue; }
+
+        let amt = parse_amount_u64(b);
+        let decimals = parse_decimals(b);
+        post_map.insert((idx, mint), (decimals, amt));
+    }
+
+    // union of keys
+    let mut keys: Vec<(u32, String)> = pre_map.keys().cloned().collect();
+    for k in post_map.keys() {
+        if !pre_map.contains_key(k) {
+            keys.push(k.clone());
         }
     }
 
     let mut out = vec![];
-    for (k, (owner_post, post_amt)) in post_map.iter() {
-        let (idx, mint) = k.clone();
-        let (owner_pre, pre_amt) = pre_map.get(&k).cloned().unwrap_or((None, "0".to_string()));
+    for (idx, mint) in keys {
+        let (dec_pre, pre_amt) = pre_map.get(&(idx, mint.clone())).cloned().unwrap_or((None, 0));
+        let (dec_post, post_amt) = post_map.get(&(idx, mint.clone())).cloned().unwrap_or((None, 0));
 
-        if pre_amt == *post_amt { continue; }
+        if pre_amt == post_amt { continue; }
 
-        let pre_amount = pre_amt.clone();
-        let post_amount = post_amt.clone();
+        let decimals = dec_post.or(dec_pre);
+
+        let delta_i128 = post_amt as i128 - pre_amt as i128;
+        let delta = delta_i128.clamp(i64::MIN as i128, i64::MAX as i128) as i64;
 
         out.push(TokenBalanceDelta {
             slot,
             block_time,
             signature: sig.to_string(),
-            owner: owner_post.clone().or(owner_pre),
             account_index: idx,
             mint,
-            pre_amount,
-            post_amount: post_amount.clone(),
-            delta: format!("{} -> {}", pre_amt, post_amount),
+            decimals,
+            pre_amount: pre_amt,
+            post_amount: post_amt,
+            delta,
         });
-
     }
 
     out

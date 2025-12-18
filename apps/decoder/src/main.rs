@@ -26,13 +26,35 @@ async fn main() -> Result<()> {
     setup_logging();
 
     let cfg: Config = config::load()?;
-    info!("decoder starting broker={} in_topic={} rpc={}", cfg.kafka_broker, cfg.in_topic, cfg.rpc_url);
+    
+    // Log comprehensive config on startup
+    info!("decoder starting:");
+    info!("  kafka_broker={}", cfg.kafka_broker);
+    info!("  in_topic={}", cfg.in_topic);
+    info!("  out_sol_deltas={}", cfg.out_sol_deltas_topic);
+    info!("  out_token_deltas={}", cfg.out_token_deltas_topic);
+    if let Some(ref dlq) = cfg.dlq_topic {
+        info!("  dlq_topic={}", dlq);
+    }
+    info!("  consumer_group={}", cfg.consumer_group);
+    info!("  rpc_primary={}", cfg.rpc_primary_url);
+    info!("  rpc_fallback_count={}", cfg.rpc_fallback_urls.len());
+    if !cfg.rpc_fallback_urls.is_empty() {
+        info!("  rpc_fallbacks={:?}", cfg.rpc_fallback_urls);
+    }
+    info!("  rpc_concurrency={}", cfg.rpc_concurrency);
+    info!("  rpc_min_delay_ms={}", cfg.rpc_min_delay_ms);
 
     let consumer = kafka::create_consumer(&cfg.kafka_broker, &cfg.consumer_group)?;
     consumer.subscribe(&[&cfg.in_topic])?;
 
     let producer = kafka::create_producer(&cfg.kafka_broker)?;
-    let rpc = RpcClient::new(cfg.rpc_url.clone());
+    let rpc = RpcClient::new(
+        cfg.rpc_primary_url.clone(),
+        cfg.rpc_fallback_urls.clone(),
+        cfg.rpc_concurrency,
+        cfg.rpc_min_delay_ms,
+    );
 
     let processed = AtomicU64::new(0);
     let produced = AtomicU64::new(0);

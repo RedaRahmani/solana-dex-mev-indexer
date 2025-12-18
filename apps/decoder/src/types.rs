@@ -5,6 +5,7 @@ pub struct RawTxEvent {
     pub slot: u64,
     pub block_time: Option<i64>,
     pub signature: String,
+    #[allow(dead_code)]
     pub is_success: bool,
 }
 
@@ -24,10 +25,10 @@ pub struct TokenBalanceDelta {
     pub slot: u64,
     pub block_time: Option<i64>,
     pub signature: String,
-    pub owner: Option<String>,
     pub account_index: u32,
     pub mint: String,
-    pub pre_amount: String,
-    pub post_amount: String,
-    pub delta: String,
+    pub decimals: Option<u8>,
+    pub pre_amount: u64,
+    pub post_amount: u64,
+    pub delta: i64,
 }
