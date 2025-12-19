@@ -236,6 +236,7 @@ pub async fn backfill_record(
     let mut ok = 0usize;
     let mut err = 0usize;
     let mut retries_429_total = 0usize;
+    let mut logged_schema = false; // schema validation flag
 
     // tune these if needed
     let max_retries = 6usize;
@@ -303,6 +304,14 @@ pub async fn backfill_record(
                 };
 
                 let json_event = serde_json::to_string(&event)?;
+                
+                // Log first produced RawTxEvent schema
+                if !logged_schema {
+                    let schema_sample = serde_json::to_string_pretty(&event).unwrap_or_default();
+                    info!("🔍 First RawTxEvent produced schema sample:\n{}", schema_sample);
+                    logged_schema = true;
+                }
+                
                 kafka::send_json(producer, kafka_topic, Some(&sig), &json_event).await?;
             }
             Err(e) => {

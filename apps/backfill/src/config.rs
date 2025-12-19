@@ -28,7 +28,7 @@ pub struct Cli {
     #[arg(long, default_value_t = 8)]
     pub concurrency: usize,
 }
-
+  
 #[derive(Debug, Clone)]
 pub struct Config {
     pub rpc_url: String,

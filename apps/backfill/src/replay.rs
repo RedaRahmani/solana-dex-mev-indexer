@@ -18,6 +18,7 @@ pub async fn replay_file(
     let r = BufReader::new(f);
 
     let mut count = 0usize;
+    let mut logged_schema = false; // schema validation flag
 
     for line in r.lines() {
         let line = line?;
@@ -61,6 +62,14 @@ pub async fn replay_file(
         };
 
         let json_event = serde_json::to_string(&event)?;
+        
+        // Log first produced RawTxEvent schema
+        if !logged_schema {
+            let schema_sample = serde_json::to_string_pretty(&event).unwrap_or_default();
+            info!("🔍 First RawTxEvent (replay) schema sample:\n{}", schema_sample);
+            logged_schema = true;
+        }
+        
         kafka::send_json(producer, kafka_topic, Some(&sig), &json_event).await?;
         count += 1;
     }

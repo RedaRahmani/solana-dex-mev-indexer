@@ -14,9 +14,15 @@ pub struct Config {
     pub out_token_deltas_topic: String,
     pub dlq_topic: Option<String>,
     pub consumer_group: String,
+    pub include_failed: bool,
 }
 
 pub fn load() -> Result<Config> {
+    let include_failed = env::var("INCLUDE_FAILED")
+        .ok()
+        .map(|s| matches!(s.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false);
+
     // RPC URL precedence: RPC_PRIMARY_URL > RPC_URL > default mainnet
     let rpc_primary_url = env::var("RPC_PRIMARY_URL")
         .or_else(|_| env::var("RPC_URL"))
@@ -72,5 +78,6 @@ pub fn load() -> Result<Config> {
         out_token_deltas_topic,
         dlq_topic,
         consumer_group,
+        include_failed,
     })
 }

@@ -33,6 +33,8 @@ async fn main() -> Result<()> {
     info!("  in_topic={}", cfg.in_topic);
     info!("  out_sol_deltas={}", cfg.out_sol_deltas_topic);
     info!("  out_token_deltas={}", cfg.out_token_deltas_topic);
+    info!("  include_failed={}", cfg.include_failed);
+
     if let Some(ref dlq) = cfg.dlq_topic {
         info!("  dlq_topic={}", dlq);
     }
@@ -62,6 +64,13 @@ async fn main() -> Result<()> {
     let sol_deltas_produced = AtomicU64::new(0);
     let token_deltas_produced = AtomicU64::new(0);
     let errors = AtomicU64::new(0);
+    let skipped_failed = AtomicU64::new(0);
+
+    // Schema validation: log first message of each type (rate-limited)
+    let mut logged_raw_tx_schema = false;
+    let mut logged_sol_delta_schema = false;
+    let mut logged_token_delta_schema = false;
+
 
     loop {
         match consumer.recv().await {
@@ -92,7 +101,41 @@ async fn main() -> Result<()> {
                     }
                 };
 
+                // Log first consumed RawTxEvent schema
+                if !logged_raw_tx_schema {
+                    let schema_sample = serde_json::to_string_pretty(&serde_json::json!({
+                        "schema_version": evt.schema_version,
+                        "chain": &evt.chain,
+                        "slot": evt.slot,
+                        "block_time": evt.block_time,
+                        "signature": &evt.signature,
+                        "index_in_block": evt.index_in_block,
+                        "tx_version": evt.tx_version,
+                        "is_success": evt.is_success,
+                        "fee_lamports": evt.fee_lamports,
+                        "compute_units_consumed": evt.compute_units_consumed,
+                        "main_program": &evt.main_program,
+                        "program_ids_count": evt.program_ids.len(),
+                    })).unwrap_or_default();
+                    info!("🔍 First RawTxEvent schema sample:\n{}", schema_sample);
+                    logged_raw_tx_schema = true;
+                }
+
                 processed.fetch_add(1, Ordering::Relaxed);
+
+                // Skip failed txs unless explicitly enabled
+                if !cfg.include_failed && !evt.is_success {
+                    skipped_failed.fetch_add(1, Ordering::Relaxed);
+
+                    let proc_count = processed.load(Ordering::Relaxed);
+                    if proc_count % 200 == 0 {
+                        debug!("skipping failed txs (include_failed=false); last_skipped_sig={}", evt.signature);
+                    }
+
+                    let _ = consumer.commit_message(&msg, rdkafka::consumer::CommitMode::Async);
+                    continue;
+                }
+
 
                 // Fetch full tx from RPC
                 let tx = match rpc.get_transaction_json_parsed(&evt.signature).await {
@@ -126,6 +169,14 @@ async fn main() -> Result<()> {
                 let sol_count = sol_deltas.len();
                 for d in sol_deltas {
                     let json = serde_json::to_string(&d)?;
+                    
+                    // Log first SOL delta schema
+                    if !logged_sol_delta_schema {
+                        let schema_sample = serde_json::to_string_pretty(&d).unwrap_or_default();
+                        info!("🔍 First SolBalanceDelta schema sample:\n{}", schema_sample);
+                        logged_sol_delta_schema = true;
+                    }
+                    
                     kafka::send_json(&producer, &cfg.out_sol_deltas_topic, &evt.signature, &json)
                         .await?;
                 }
@@ -134,6 +185,14 @@ async fn main() -> Result<()> {
                 let tok_count = tok_deltas.len();
                 for d in tok_deltas {
                     let json = serde_json::to_string(&d)?;
+                    
+                    // Log first token delta schema
+                    if !logged_token_delta_schema {
+                        let schema_sample = serde_json::to_string_pretty(&d).unwrap_or_default();
+                        info!("🔍 First TokenBalanceDelta schema sample:\n{}", schema_sample);
+                        logged_token_delta_schema = true;
+                    }
+                    
                     kafka::send_json(
                         &producer,
                         &cfg.out_token_deltas_topic,
