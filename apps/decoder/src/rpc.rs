@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::warn;
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Semaphore;
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 
 #[derive(Clone)]
 pub struct RpcClient {
@@ -14,22 +14,30 @@ pub struct RpcClient {
     fallback_urls: Vec<String>,
     semaphore: Arc<Semaphore>,
     min_delay_ms: u64,
+    max_tx_version: u8,
     last_request: Arc<tokio::sync::Mutex<Instant>>,
 }
 
 impl RpcClient {
-    pub fn new(primary_url: String, fallback_urls: Vec<String>, concurrency: u32, min_delay_ms: u64) -> Self {
+    pub fn new(
+        primary_url: String,
+        fallback_urls: Vec<String>,
+        concurrency: u32,
+        min_delay_ms: u64,
+        max_tx_version: u8,
+    ) -> Self {
         let http = Client::builder()
             .timeout(Duration::from_secs(25))
             .build()
             .expect("reqwest");
-        
+
         Self {
             http,
             primary_url,
             fallback_urls,
             semaphore: Arc::new(Semaphore::new(concurrency as usize)),
             min_delay_ms,
+            max_tx_version,
             last_request: Arc::new(tokio::sync::Mutex::new(Instant::now())),
         }
     }
@@ -37,7 +45,7 @@ impl RpcClient {
     pub async fn get_transaction_json_parsed(&self, signature: &str) -> Result<Value> {
         let params = json!([
             signature,
-            {"encoding":"jsonParsed", "maxSupportedTransactionVersion": 0}
+            {"encoding":"jsonParsed", "maxSupportedTransactionVersion": self.max_tx_version}
         ]);
         self.call("getTransaction", params).await
     }
@@ -61,11 +69,11 @@ impl RpcClient {
             let url_index = (attempt - 1) % urls_to_try.len();
             let url = &urls_to_try[url_index];
 
-            let body = json!({ 
-                "jsonrpc": "2.0", 
-                "id": 1, 
-                "method": method, 
-                "params": params 
+            let body = json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": params
             });
 
             let resp = self.http.post(url).json(&body).send().await;
@@ -73,11 +81,16 @@ impl RpcClient {
             match resp {
                 Ok(r) => {
                     let status = r.status();
-                    
+
                     // Handle rate limiting specifically
                     if status.as_u16() == 429 {
                         if attempt < max_attempts {
-                            warn!("RPC 429 rate limit, backing off {}ms (attempt {}/{})", backoff.as_millis(), attempt, max_attempts);
+                            warn!(
+                                "RPC 429 rate limit, backing off {}ms (attempt {}/{})",
+                                backoff.as_millis(),
+                                attempt,
+                                max_attempts
+                            );
                             sleep(backoff).await;
                             backoff = (backoff * 2).min(Duration::from_secs(8));
                             continue;
@@ -88,20 +101,32 @@ impl RpcClient {
                     // Handle 5xx server errors
                     if status.is_server_error() {
                         if attempt < max_attempts {
-                            warn!("RPC server error {}, retrying (attempt {}/{})", status, attempt, max_attempts);
+                            warn!(
+                                "RPC server error {}, retrying (attempt {}/{})",
+                                status, attempt, max_attempts
+                            );
                             sleep(backoff).await;
                             backoff = (backoff * 2).min(Duration::from_secs(5));
                             continue;
                         }
-                        return Err(anyhow!("RPC server error after {} attempts: {}", max_attempts, status));
+                        return Err(anyhow!(
+                            "RPC server error after {} attempts: {}",
+                            max_attempts,
+                            status
+                        ));
                     }
 
-                    let v: Value = r.json().await
+                    let v: Value = r
+                        .json()
+                        .await
                         .map_err(|e| anyhow!("rpc decode error: {e:?}"))?;
 
                     if let Some(error) = v.get("error") {
                         if attempt < max_attempts {
-                            warn!("RPC error response: {}, retrying (attempt {}/{})", error, attempt, max_attempts);
+                            warn!(
+                                "RPC error response: {}, retrying (attempt {}/{})",
+                                error, attempt, max_attempts
+                            );
                             sleep(backoff).await;
                             backoff = (backoff * 2).min(Duration::from_secs(5));
                             continue;
@@ -118,18 +143,25 @@ impl RpcClient {
                         return Err(anyhow!("RPC non-success status: {} body: {}", status, v));
                     }
 
-                    return v.get("result")
+                    return v
+                        .get("result")
                         .cloned()
                         .ok_or_else(|| anyhow!("missing result field"));
                 }
                 Err(e) => {
                     if attempt < max_attempts {
-                        warn!("RPC request failed: {e:?}, retrying (attempt {}/{})", attempt, max_attempts);
+                        warn!(
+                            "RPC request failed: {e:?}, retrying (attempt {}/{})",
+                            attempt, max_attempts
+                        );
                         sleep(backoff).await;
                         backoff = (backoff * 2).min(Duration::from_secs(5));
                         continue;
                     }
-                    return Err(anyhow!("RPC request failed after {} attempts: {e:?}", max_attempts));
+                    return Err(anyhow!(
+                        "RPC request failed after {} attempts: {e:?}",
+                        max_attempts
+                    ));
                 }
             }
         }

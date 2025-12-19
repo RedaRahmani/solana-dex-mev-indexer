@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::env;
 
 #[derive(Clone, Debug)]
@@ -7,6 +7,7 @@ pub struct Config {
     pub rpc_fallback_urls: Vec<String>,
     pub rpc_concurrency: u32,
     pub rpc_min_delay_ms: u64,
+    pub rpc_max_tx_version: u8,
     pub kafka_broker: String,
     pub in_topic: String,
     pub out_sol_deltas_topic: String,
@@ -41,10 +42,15 @@ pub fn load() -> Result<Config> {
         .and_then(|s| s.parse().ok())
         .unwrap_or(250);
 
+    let rpc_max_tx_version = env::var("RPC_MAX_TX_VERSION")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1);
+
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "localhost:19092".to_string());
     let in_topic = env::var("KAFKA_IN_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
-    let out_sol_deltas_topic = env::var("KAFKA_OUT_SOL_DELTAS_TOPIC")
-        .unwrap_or_else(|_| "sol_balance_deltas".to_string());
+    let out_sol_deltas_topic =
+        env::var("KAFKA_OUT_SOL_DELTAS_TOPIC").unwrap_or_else(|_| "sol_balance_deltas".to_string());
     let out_token_deltas_topic = env::var("KAFKA_OUT_TOKEN_DELTAS_TOPIC")
         .unwrap_or_else(|_| "sol_token_balance_deltas".to_string());
     let dlq_topic = env::var("KAFKA_DLQ_TOPIC").ok();
@@ -59,6 +65,7 @@ pub fn load() -> Result<Config> {
         rpc_fallback_urls,
         rpc_concurrency,
         rpc_min_delay_ms,
+        rpc_max_tx_version,
         kafka_broker,
         in_topic,
         out_sol_deltas_topic,

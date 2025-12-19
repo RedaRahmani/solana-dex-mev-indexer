@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use rdkafka::config::ClientConfig;
-use rdkafka::consumer::{ StreamConsumer};
+use rdkafka::consumer::StreamConsumer;
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use std::time::Duration;
@@ -27,7 +27,12 @@ pub fn create_producer(broker: &str) -> Result<FutureProducer> {
     Ok(p)
 }
 
-pub async fn send_json(producer: &FutureProducer, topic: &str, key: &str, json: &str) -> Result<()> {
+pub async fn send_json(
+    producer: &FutureProducer,
+    topic: &str,
+    key: &str,
+    json: &str,
+) -> Result<()> {
     let rec = FutureRecord::<str, str>::to(topic).key(key).payload(json);
     match producer.send(rec, Duration::from_secs(10)).await {
         Ok(_) => Ok(()),
