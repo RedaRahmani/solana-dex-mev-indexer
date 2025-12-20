@@ -1014,6 +1014,7 @@ dependencies = [
  "log",
  "rdkafka",
  "reqwest",
+ "schema",
  "serde",
  "serde_json",
  "tokio",
@@ -3036,6 +3037,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "891d81b926048e76efe18581bf793546b4c0eaf8448d72be8de2bbee5fd166e1"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "schema"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
