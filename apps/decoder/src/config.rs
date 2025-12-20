@@ -12,9 +12,22 @@ pub struct Config {
     pub in_topic: String,
     pub out_sol_deltas_topic: String,
     pub out_token_deltas_topic: String,
+    pub out_swaps_topic: String,
+    pub swaps_explain: bool,
+    pub swaps_explain_limit: u32,
+    pub raydium_amm_v4_program_id: String,
     pub dlq_topic: Option<String>,
     pub consumer_group: String,
     pub include_failed: bool,
+}
+
+fn parse_bool(v: Option<String>, default: bool) -> bool {
+    match v.as_deref() {
+        Some("1") | Some("true") | Some("TRUE") | Some("yes") | Some("YES") => true,
+        Some("0") | Some("false") | Some("FALSE") | Some("no") | Some("NO") => false,
+        None => default,
+        _ => default,
+    }
 }
 
 pub fn load() -> Result<Config> {
@@ -59,11 +72,31 @@ pub fn load() -> Result<Config> {
         env::var("KAFKA_OUT_SOL_DELTAS_TOPIC").unwrap_or_else(|_| "sol_balance_deltas".to_string());
     let out_token_deltas_topic = env::var("KAFKA_OUT_TOKEN_DELTAS_TOPIC")
         .unwrap_or_else(|_| "sol_token_balance_deltas".to_string());
+
+    let out_swaps_topic =
+        env::var("KAFKA_OUT_SWAPS_TOPIC").unwrap_or_else(|_| "sol_swaps".to_string());
+
+    let swaps_explain = parse_bool(env::var("SWAPS_EXPLAIN").ok(), false);
+    let swaps_explain_limit = env::var("SWAPS_EXPLAIN_LIMIT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(20);
+
+    // Raydium AMM v4 program id must be provided when you enable swap detection.
+    // Keep it empty by default so current decoder flows keep working.
+    let raydium_amm_v4_program_id =
+        env::var("RAYDIUM_AMM_V4_PROGRAM_ID").unwrap_or_else(|_| "".to_string());
     let dlq_topic = env::var("KAFKA_DLQ_TOPIC").ok();
     let consumer_group = env::var("KAFKA_GROUP").unwrap_or_else(|_| "decoder_v1".to_string());
 
     if kafka_broker.trim().is_empty() {
         return Err(anyhow!("KAFKA_BROKER is empty"));
+    }
+    if in_topic.trim().is_empty() {
+        return Err(anyhow!("KAFKA_IN_TOPIC is empty"));
+    }
+    if out_swaps_topic.trim().is_empty() {
+        return Err(anyhow!("KAFKA_OUT_SWAPS_TOPIC is empty"));
     }
 
     Ok(Config {
@@ -76,6 +109,10 @@ pub fn load() -> Result<Config> {
         in_topic,
         out_sol_deltas_topic,
         out_token_deltas_topic,
+        out_swaps_topic,
+        swaps_explain,
+        swaps_explain_limit,
+        raydium_amm_v4_program_id,
         dlq_topic,
         consumer_group,
         include_failed,
