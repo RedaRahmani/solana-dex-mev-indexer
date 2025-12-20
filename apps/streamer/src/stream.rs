@@ -53,8 +53,6 @@ fn extract_program_ids(account_keys: &[String], program_id_indexes: impl Iterato
     out
 }
 
-/// Connects, subscribes, and streams until the stream breaks.
-/// Returns Ok(()) when stream ends (caller should reconnect).
 pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> Result<()> {
     let mut client = GeyserGrpcClient::build_from_shared(cfg.geyser_endpoint.clone())?
         .x_token(cfg.geyser_x_token.clone())?

@@ -6,13 +6,10 @@ use std::time::Duration;
 pub fn create_producer(broker: &str) -> Result<FutureProducer> {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", broker)
-        // reliability
         .set("acks", "all")
         .set("enable.idempotence", "true")
-        // throughput
         .set("compression.type", "lz4")
         .set("linger.ms", "10")
-        // avoid fail-fast drops
         .set("message.timeout.ms", "60000")
         .set("retries", "10")
         .create()?;
