@@ -1,14 +1,13 @@
 use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use tonic::transport::ClientTlsConfig;
 use yellowstone_grpc_client::GeyserGrpcClient;
 use yellowstone_grpc_proto::prelude::{
-    subscribe_update::UpdateOneof, SubscribeRequest, SubscribeRequestFilterTransactions,
+    SubscribeRequest, SubscribeRequestFilterTransactions, subscribe_update::UpdateOneof,
 };
-use bs58;
-use serde::Serialize;
 
 use crate::{config::Config, kafka, metrics::Metrics};
 use rdkafka::producer::FutureProducer;
@@ -35,10 +34,16 @@ fn pick_main_program(program_ids: &[String]) -> Option<String> {
         "11111111111111111111111111111111",
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     ];
-    program_ids.iter().find(|p| !skip.contains(&p.as_str())).cloned()
+    program_ids
+        .iter()
+        .find(|p| !skip.contains(&p.as_str()))
+        .cloned()
 }
 
-fn extract_program_ids(account_keys: &[String], program_id_indexes: impl Iterator<Item = u32>) -> Vec<String> {
+fn extract_program_ids(
+    account_keys: &[String],
+    program_id_indexes: impl Iterator<Item = u32>,
+) -> Vec<String> {
     let mut out = vec![];
     let mut seen = HashSet::new();
     for idx in program_id_indexes {
@@ -82,7 +87,8 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
         .await?;
 
     info!("Subscribed. Streaming…");
-    m.connected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    m.connected
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
     while let Some(msg) = sub_rx.next().await {
         let msg = match msg {
@@ -97,7 +103,9 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
             Some(UpdateOneof::Transaction(tx)) => {
                 m.tx_seen.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-                let Some(tx_info) = tx.transaction else { continue };
+                let Some(tx_info) = tx.transaction else {
+                    continue;
+                };
                 let signature = bs58::encode(&tx_info.signature).into_string();
 
                 let slot = tx.slot;
@@ -106,7 +114,11 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
                 let is_success = meta.and_then(|mm| mm.err.as_ref()).is_none();
                 let fee_lamports = meta.map(|mm| mm.fee).unwrap_or(0);
 
-                let message = match tx_info.transaction.as_ref().and_then(|t| t.message.as_ref()) {
+                let message = match tx_info
+                    .transaction
+                    .as_ref()
+                    .and_then(|t| t.message.as_ref())
+                {
                     Some(mm) => mm,
                     None => continue,
                 };
@@ -125,7 +137,8 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
                     .flat_map(|mm| mm.inner_instructions.iter())
                     .flat_map(|ii| ii.instructions.iter().map(|ix| ix.program_id_index));
 
-                let program_ids = extract_program_ids(&account_keys, outer_indexes.chain(inner_indexes));
+                let program_ids =
+                    extract_program_ids(&account_keys, outer_indexes.chain(inner_indexes));
                 let main_program = pick_main_program(&program_ids);
 
                 let event = RawTxEvent {
@@ -149,7 +162,8 @@ pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> R
                         m.send_ok.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     }
                     Err(e) => {
-                        m.send_err.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        m.send_err
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         error!("kafka send failed: {e:?}");
                     }
                 }

@@ -3,13 +3,13 @@ use crate::{
     rpc::RpcClient,
     types::{DlqEvent, RawTxEvent},
 };
-use anyhow::{anyhow, Result};
-use futures::{stream, StreamExt};
+use anyhow::{Result, anyhow};
+use futures::{StreamExt, stream};
 use log::{info, warn};
 use rdkafka::producer::FutureProducer;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
-    collections::{hash_map::DefaultHasher, HashSet},
+    collections::{HashSet, hash_map::DefaultHasher},
     fs::OpenOptions,
     hash::{Hash, Hasher},
     io::Write,
@@ -103,7 +103,9 @@ fn extract_program_ids_from_tx(tx: &Value) -> Vec<String> {
 
 fn is_rate_limited_429(err_dbg: &str) -> bool {
     // Your logs show: "status=429 Too Many Requests"
-    err_dbg.contains("status=429") || err_dbg.contains("Too Many Requests") || err_dbg.contains("\"code\":429")
+    err_dbg.contains("status=429")
+        || err_dbg.contains("Too Many Requests")
+        || err_dbg.contains("\"code\":429")
 }
 
 fn jitter_ms(sig: &str, attempt: usize) -> u64 {
@@ -111,7 +113,7 @@ fn jitter_ms(sig: &str, attempt: usize) -> u64 {
     let mut h = DefaultHasher::new();
     sig.hash(&mut h);
     attempt.hash(&mut h);
-    (h.finish() % 200) as u64 // 0..199ms
+    h.finish() % 200 // 0..199ms
 }
 
 async fn get_transaction_with_retry(
@@ -167,6 +169,7 @@ async fn get_transaction_with_retry(
     unreachable!()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn backfill_record(
     rpc: &RpcClient,
     producer: &FutureProducer,
@@ -179,7 +182,10 @@ pub async fn backfill_record(
     out_path: &Path,
 ) -> Result<()> {
     // open jsonl writer
-    let mut f = OpenOptions::new().create(true).append(true).open(out_path)?;
+    let mut f = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(out_path)?;
 
     info!(
         "backfill: address={} limit={} concurrency={} rpc={}",
@@ -249,7 +255,9 @@ pub async fn backfill_record(
             let sig2 = sig.clone();
             let chain = chain.clone();
             async move {
-                let tx = get_transaction_with_retry(&rpc, &sig2, max_retries, base_backoff, max_backoff).await;
+                let tx =
+                    get_transaction_with_retry(&rpc, &sig2, max_retries, base_backoff, max_backoff)
+                        .await;
                 (sig, chain, tx)
             }
         })
@@ -269,7 +277,10 @@ pub async fn backfill_record(
                 let slot = tx.get("slot").and_then(|v| v.as_u64()).unwrap_or(0);
                 let block_time = tx.get("blockTime").and_then(|v| v.as_i64());
 
-                let fee = tx.pointer("/meta/fee").and_then(|v| v.as_u64()).unwrap_or(0);
+                let fee = tx
+                    .pointer("/meta/fee")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
                 let is_success = tx.pointer("/meta/err").is_none();
 
                 let program_ids = extract_program_ids_from_tx(&tx);
@@ -304,14 +315,17 @@ pub async fn backfill_record(
                 };
 
                 let json_event = serde_json::to_string(&event)?;
-                
+
                 // Log first produced RawTxEvent schema
                 if !logged_schema {
                     let schema_sample = serde_json::to_string_pretty(&event).unwrap_or_default();
-                    info!("🔍 First RawTxEvent produced schema sample:\n{}", schema_sample);
+                    info!(
+                        "🔍 First RawTxEvent produced schema sample:\n{}",
+                        schema_sample
+                    );
                     logged_schema = true;
                 }
-                
+
                 kafka::send_json(producer, kafka_topic, Some(&sig), &json_event).await?;
             }
             Err(e) => {
@@ -331,7 +345,7 @@ pub async fn backfill_record(
 
         // periodic progress
         let done = ok + err;
-        if done % 100 == 0 {
+        if done.is_multiple_of(100) {
             info!(
                 "progress fetched={} ok={} err={} retries_429_total={}",
                 done, ok, err, retries_429_total

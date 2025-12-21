@@ -1,8 +1,8 @@
 use anyhow::Result;
 use log::{info, warn};
+use rdkafka::producer::Producer;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use rdkafka::producer::Producer;
 use tokio::time::sleep;
 
 mod config;
@@ -25,7 +25,10 @@ async fn main() -> Result<()> {
 
     let cfg: Config = config::load()?;
 
-    info!("streamer starting topic={} broker={}", cfg.kafka_topic, cfg.kafka_broker);
+    info!(
+        "streamer starting topic={} broker={}",
+        cfg.kafka_topic, cfg.kafka_broker
+    );
     info!(
         "endpoint={} commitment={:?} include_failed={} required_accounts={:?}",
         cfg.geyser_endpoint, cfg.commitment, cfg.include_failed, cfg.required_accounts
@@ -59,7 +62,7 @@ async fn main() -> Result<()> {
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
                 warn!("shutdown signal received (Ctrl+C). flushing Kafka producer...");
-                producer.flush(Duration::from_secs(10));
+                let _ = producer.flush(Duration::from_secs(10));
                 warn!("shutdown complete.");
                 break;
             }

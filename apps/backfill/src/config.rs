@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use std::{env, path::PathBuf};
 
@@ -28,7 +28,7 @@ pub struct Cli {
     #[arg(long, default_value_t = 8)]
     pub concurrency: usize,
 }
-  
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub rpc_url: String,
@@ -39,20 +39,31 @@ pub struct Config {
 }
 
 pub fn load(cli: &Cli) -> Result<Config> {
-    let rpc_url = cli.rpc_url.clone().or_else(|| env::var("RPC_URL").ok())
+    let rpc_url = cli
+        .rpc_url
+        .clone()
+        .or_else(|| env::var("RPC_URL").ok())
         .unwrap_or_else(|| "https://api.mainnet-beta.solana.com".to_string());
 
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "127.0.0.1:19092".to_string());
-    let kafka_topic  = env::var("KAFKA_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
-    let dlq_topic    = env::var("KAFKA_DLQ_TOPIC").unwrap_or_else(|_| "sol_raw_txs_dlq".to_string());
+    let kafka_topic = env::var("KAFKA_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
+    let dlq_topic = env::var("KAFKA_DLQ_TOPIC").unwrap_or_else(|_| "sol_raw_txs_dlq".to_string());
 
     // keep consistent with your existing schema
     let chain = env::var("CHAIN").unwrap_or_else(|_| "solana-mainnet".to_string());
 
     // Validate mode
     if cli.from_file.is_none() && cli.out.is_none() {
-        return Err(anyhow!("Choose a mode: either --out <file> (backfill/record) or --from-file <file> (replay)"));
+        return Err(anyhow!(
+            "Choose a mode: either --out <file> (backfill/record) or --from-file <file> (replay)"
+        ));
     }
 
-    Ok(Config { rpc_url, kafka_broker, kafka_topic, dlq_topic, chain })
+    Ok(Config {
+        rpc_url,
+        kafka_broker,
+        kafka_topic,
+        dlq_topic,
+        chain,
+    })
 }

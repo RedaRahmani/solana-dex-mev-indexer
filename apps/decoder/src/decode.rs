@@ -142,7 +142,7 @@ pub fn decode_token_deltas(
     if pre.is_empty() && post.is_empty() {
         static EMPTY_COUNTER: AtomicU64 = AtomicU64::new(0);
         let count = EMPTY_COUNTER.fetch_add(1, Ordering::Relaxed);
-        if count % 1000 == 0 {
+        if count.is_multiple_of(1000) {
             debug!("token balances both empty (seen {} times total)", count + 1);
         }
     }

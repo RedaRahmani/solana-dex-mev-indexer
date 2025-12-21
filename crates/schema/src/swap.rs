@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize , Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SwapEvent {
-    pub schema_version: u16, 
+    pub schema_version: u16,
     pub chain: String,
     pub slot: u64,
     pub block_time: Option<i64>,
@@ -19,5 +19,5 @@ pub struct SwapEvent {
     pub fee_amount: Option<String>,
     pub route_id: Option<String>,
     pub confidence: u8,
-    pub explain: Option<String>, 
+    pub explain: Option<String>,
 }

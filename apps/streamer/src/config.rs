@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::{env, time::Duration};
 use yellowstone_grpc_proto::prelude::CommitmentLevel;
 
@@ -32,13 +32,15 @@ fn parse_commitment(s: &str) -> Result<CommitmentLevel> {
         "processed" => Ok(CommitmentLevel::Processed),
         "confirmed" => Ok(CommitmentLevel::Confirmed),
         "finalized" => Ok(CommitmentLevel::Finalized),
-        other => Err(anyhow!("Invalid COMMITMENT={other}. Use processed|confirmed|finalized")),
+        other => Err(anyhow!(
+            "Invalid COMMITMENT={other}. Use processed|confirmed|finalized"
+        )),
     }
 }
 
 pub fn load() -> Result<Config> {
-    let geyser_endpoint = env::var("GEYSER_ENDPOINT")
-        .map_err(|_| anyhow!("Missing GEYSER_ENDPOINT"))?;
+    let geyser_endpoint =
+        env::var("GEYSER_ENDPOINT").map_err(|_| anyhow!("Missing GEYSER_ENDPOINT"))?;
     let geyser_x_token = env::var("GEYSER_X_TOKEN").ok();
 
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "localhost:19092".to_string());
@@ -53,9 +55,8 @@ pub fn load() -> Result<Config> {
 
     let include_failed = parse_bool(env::var("INCLUDE_FAILED").ok(), false);
 
-    let commitment = parse_commitment(
-        &env::var("COMMITMENT").unwrap_or_else(|_| "processed".to_string()),
-    )?;
+    let commitment =
+        parse_commitment(&env::var("COMMITMENT").unwrap_or_else(|_| "processed".to_string()))?;
 
     Ok(Config {
         geyser_endpoint,

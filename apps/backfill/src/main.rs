@@ -25,17 +25,31 @@ async fn main() -> Result<()> {
     let producer = kafka::create_producer(&cfg.kafka_broker)?;
 
     // Ensure data dir exists if using --out data/...
-    if let Some(out) = &cli.out {
-        if let Some(parent) = out.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(out) = &cli.out
+        && let Some(parent) = out.parent()
+    {
+        std::fs::create_dir_all(parent)?;
     }
-info!("using rpc_url={}", cfg.rpc_url);
+    info!("using rpc_url={}", cfg.rpc_url);
 
-    info!("mode: {}", if cli.from_file.is_some() { "replay" } else { "backfill" });
+    info!(
+        "mode: {}",
+        if cli.from_file.is_some() {
+            "replay"
+        } else {
+            "backfill"
+        }
+    );
 
     if let Some(from) = cli.from_file {
-        replay::replay_file(&producer, &cfg.kafka_topic, &cfg.dlq_topic, &cfg.chain, &from).await?;
+        replay::replay_file(
+            &producer,
+            &cfg.kafka_topic,
+            &cfg.dlq_topic,
+            &cfg.chain,
+            &from,
+        )
+        .await?;
         return Ok(());
     }
 
@@ -53,7 +67,8 @@ info!("using rpc_url={}", cfg.rpc_url);
         cli.limit,
         cli.concurrency,
         &out,
-    ).await?;
+    )
+    .await?;
 
     Ok(())
 }

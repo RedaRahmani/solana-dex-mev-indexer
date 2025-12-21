@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -36,7 +36,10 @@ impl RpcClient {
             match resp {
                 Ok(r) => {
                     let status = r.status();
-                    let v: Value = r.json().await.map_err(|e| anyhow!("rpc decode error: {e:?}"))?;
+                    let v: Value = r
+                        .json()
+                        .await
+                        .map_err(|e| anyhow!("rpc decode error: {e:?}"))?;
 
                     if !status.is_success() {
                         // usually 429/5xx
@@ -58,7 +61,10 @@ impl RpcClient {
                         return Err(anyhow!("rpc returned error: {err}"));
                     }
 
-                    return v.get("result").cloned().ok_or_else(|| anyhow!("missing result field"));
+                    return v
+                        .get("result")
+                        .cloned()
+                        .ok_or_else(|| anyhow!("missing result field"));
                 }
                 Err(e) => {
                     if attempt < 6 {

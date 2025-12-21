@@ -2,11 +2,9 @@ use anyhow::Result;
 use clickhouse::{Client, Row};
 use serde::Deserialize;
 
-
-
 #[derive(Debug, Deserialize, Row)]
 struct RawTxRow {
-    ts: String,              // we'll convert DateTime -> String in SQL
+    ts: String, // we'll convert DateTime -> String in SQL
     slot: u64,
     signature: String,
     tx_version: Option<u8>,
@@ -42,9 +40,7 @@ async fn main() -> Result<()> {
 
     println!("Running query:\n{query}");
 
-    let mut cursor = client
-        .query(query)
-        .fetch::<RawTxRow>()?;
+    let mut cursor = client.query(query).fetch::<RawTxRow>()?;
 
     println!("\nLast 10 raw txs:\n");
 

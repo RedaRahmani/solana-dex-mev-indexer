@@ -1,9 +1,16 @@
-use crate::{kafka, types::{DlqEvent, RawTxEvent}};
-use anyhow::{anyhow, Result};
+use crate::{
+    kafka,
+    types::{DlqEvent, RawTxEvent},
+};
+use anyhow::{Result, anyhow};
 use log::info;
 use rdkafka::producer::FutureProducer;
 use serde_json::Value;
-use std::{fs::File, io::{BufRead, BufReader}, path::Path};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
 pub async fn replay_file(
     producer: &FutureProducer,
@@ -22,11 +29,20 @@ pub async fn replay_file(
 
     for line in r.lines() {
         let line = line?;
-        if line.trim().is_empty() { continue; }
+        if line.trim().is_empty() {
+            continue;
+        }
 
         let v: Value = serde_json::from_str(&line)?;
-        let sig = v.get("signature").and_then(|x| x.as_str()).unwrap_or("").to_string();
-        let tx = v.get("tx").cloned().ok_or_else(|| anyhow!("missing tx field"))?;
+        let sig = v
+            .get("signature")
+            .and_then(|x| x.as_str())
+            .unwrap_or("")
+            .to_string();
+        let tx = v
+            .get("tx")
+            .cloned()
+            .ok_or_else(|| anyhow!("missing tx field"))?;
 
         let slot = tx.get("slot").and_then(|v| v.as_u64()).unwrap_or(0);
         if sig.is_empty() || slot == 0 {
@@ -41,7 +57,10 @@ pub async fn replay_file(
             continue;
         }
 
-        let fee = tx.pointer("/meta/fee").and_then(|v| v.as_u64()).unwrap_or(0);
+        let fee = tx
+            .pointer("/meta/fee")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         let is_success = tx.pointer("/meta/err").is_none();
         let block_time = tx.get("blockTime").and_then(|v| v.as_i64());
 
@@ -62,14 +81,17 @@ pub async fn replay_file(
         };
 
         let json_event = serde_json::to_string(&event)?;
-        
+
         // Log first produced RawTxEvent schema
         if !logged_schema {
             let schema_sample = serde_json::to_string_pretty(&event).unwrap_or_default();
-            info!("🔍 First RawTxEvent (replay) schema sample:\n{}", schema_sample);
+            info!(
+                "🔍 First RawTxEvent (replay) schema sample:\n{}",
+                schema_sample
+            );
             logged_schema = true;
         }
-        
+
         kafka::send_json(producer, kafka_topic, Some(&sig), &json_event).await?;
         count += 1;
     }

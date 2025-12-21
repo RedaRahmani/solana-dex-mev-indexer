@@ -10,7 +10,7 @@ pub struct RawTxEvent {
     pub index_in_block: u32,
     pub tx_version: Option<u8>,
     pub is_success: bool,
-    pub fee_lamports : u64,
+    pub fee_lamports: u64,
     pub compute_units_consumed: Option<u64>,
     pub main_program: Option<String>,
     pub program_ids: Vec<String>,

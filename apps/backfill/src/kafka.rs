@@ -16,9 +16,16 @@ pub fn create_producer(broker: &str) -> Result<FutureProducer> {
     Ok(producer)
 }
 
-pub async fn send_json(producer: &FutureProducer, topic: &str, key: Option<&str>, json: &str) -> Result<()> {
+pub async fn send_json(
+    producer: &FutureProducer,
+    topic: &str,
+    key: Option<&str>,
+    json: &str,
+) -> Result<()> {
     let mut rec = FutureRecord::<str, str>::to(topic).payload(json);
-    if let Some(k) = key { rec = rec.key(k); }
+    if let Some(k) = key {
+        rec = rec.key(k);
+    }
 
     // give Kafka time to deliver
     let _ = producer.send(rec, Duration::from_secs(5)).await;
