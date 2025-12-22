@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS solana.dex_swaps_v1
   ingested_at DateTime DEFAULT now(),
   version UInt64 DEFAULT toUnixTimestamp(now())
 )
-ENGINE = MergeTree
+ENGINE = ReplacingMergeTree(version)
 PARTITION BY toYYYYMMDD(fromUnixTimestamp(coalesce(block_time, 0)))
 ORDER BY (signature, index_in_tx);
 
