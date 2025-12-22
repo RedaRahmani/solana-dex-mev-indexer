@@ -8,8 +8,10 @@ use tokio::time::sleep;
 
 mod config;
 mod decode;
+mod detectors;
 mod kafka;
 mod rpc;
+mod sinks;
 mod types;
 
 use config::Config;
@@ -54,6 +56,20 @@ async fn main() -> Result<()> {
     info!("  rpc_min_delay_ms={}", cfg.rpc_min_delay_ms);
     info!("  rpc_max_tx_version={}", cfg.rpc_max_tx_version);
 
+    // Log swap detection config
+    if !cfg.raydium_amm_v4_program_id.is_empty() {
+        info!("  swap_detection=ENABLED");
+        info!(
+            "  raydium_amm_v4_program_id={}",
+            cfg.raydium_amm_v4_program_id
+        );
+        info!("  out_swaps_topic={}", cfg.out_swaps_topic);
+        info!("  swaps_explain={}", cfg.swaps_explain);
+        info!("  swaps_explain_limit={}", cfg.swaps_explain_limit);
+    } else {
+        info!("  swap_detection=DISABLED (RAYDIUM_AMM_V4_PROGRAM_ID not set)");
+    }
+
     let consumer = kafka::create_consumer(&cfg.kafka_broker, &cfg.consumer_group)?;
     consumer.subscribe(&[&cfg.in_topic])?;
 
@@ -72,11 +88,15 @@ async fn main() -> Result<()> {
     let errors = AtomicU64::new(0);
     let skipped_failed = AtomicU64::new(0);
     let dlq_sent = AtomicU64::new(0);
+    let swaps_detected = AtomicU64::new(0);
+    let swaps_emitted = AtomicU64::new(0);
+    let swaps_publish_errors = AtomicU64::new(0);
 
     // Schema validation: log first message of each type (rate-limited)
     let mut logged_raw_tx_schema = false;
     let mut logged_sol_delta_schema = false;
     let mut logged_token_delta_schema = false;
+    let mut logged_swap_schema = false;
 
     // Retry budget: track failure count per signature to prevent poison-pill stalls
     let mut failure_counts: HashMap<String, u32> = HashMap::new();
@@ -295,6 +315,59 @@ async fn main() -> Result<()> {
                 }
                 token_deltas_produced.fetch_add(tok_count as u64, Ordering::Relaxed);
 
+                // Swap detection (best-effort, errors logged but not fatal)
+                if !cfg.raydium_amm_v4_program_id.is_empty() {
+                    // Determine if we should attach explain (respect limit)
+                    let should_explain = cfg.swaps_explain
+                        && swaps_emitted.load(Ordering::Relaxed) < cfg.swaps_explain_limit as u64;
+
+                    match detectors::raydium_v4::detect_raydium_v4_swap(
+                        &evt.chain,
+                        evt.slot,
+                        evt.block_time,
+                        &evt.signature,
+                        &evt.program_ids,
+                        &cfg.raydium_amm_v4_program_id,
+                        &tx,
+                        should_explain,
+                    ) {
+                        Some(swap) => {
+                            swaps_detected.fetch_add(1, Ordering::Relaxed);
+
+                            // Log first swap schema
+                            if !logged_swap_schema {
+                                let schema_sample =
+                                    serde_json::to_string_pretty(&swap).unwrap_or_default();
+                                info!("🔍 First SwapEvent schema sample:\n{}", schema_sample);
+                                logged_swap_schema = true;
+                            }
+
+                            match sinks::swap::send_swap(&producer, &cfg.out_swaps_topic, &swap)
+                                .await
+                            {
+                                Ok(_) => {
+                                    swaps_emitted.fetch_add(1, Ordering::Relaxed);
+                                    debug!(
+                                        "swap emitted: sig={} trader={} in_mint={} out_mint={} confidence={}",
+                                        swap.signature,
+                                        swap.trader,
+                                        swap.in_mint,
+                                        swap.out_mint,
+                                        swap.confidence
+                                    );
+                                }
+                                Err(e) => {
+                                    swaps_publish_errors.fetch_add(1, Ordering::Relaxed);
+                                    warn!("swap publish failed sig={} err={:?}", evt.signature, e);
+                                }
+                            }
+                        }
+                        None => {
+                            // Not a swap or multi-hop (silent skip)
+                        }
+                    }
+                }
+
                 // Commit offset only after successful publish
                 let _ = consumer.commit_message(&msg, rdkafka::consumer::CommitMode::Async);
 
@@ -307,15 +380,21 @@ async fn main() -> Result<()> {
                     let err_count = errors.load(Ordering::Relaxed);
                     let dlq_count = dlq_sent.load(Ordering::Relaxed);
                     let pending_retries = failure_counts.len();
+                    let swaps_det = swaps_detected.load(Ordering::Relaxed);
+                    let swaps_emit = swaps_emitted.load(Ordering::Relaxed);
+                    let swaps_err = swaps_publish_errors.load(Ordering::Relaxed);
                     info!(
-                        "stats: processed={} sol_deltas={} token_deltas={} total_produced={} errors={} dlq_sent={} pending_retries={}",
+                        "stats: processed={} sol_deltas={} token_deltas={} total_produced={} errors={} dlq_sent={} pending_retries={} swaps_detected={} swaps_emitted={} swap_errors={}",
                         proc_count,
                         sol_prod,
                         tok_prod,
                         total_prod,
                         err_count,
                         dlq_count,
-                        pending_retries
+                        pending_retries,
+                        swaps_det,
+                        swaps_emit,
+                        swaps_err
                     );
                 }
             }

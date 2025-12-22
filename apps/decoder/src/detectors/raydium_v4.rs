@@ -2,6 +2,7 @@ use schema::SwapEvent;
 use serde_json::Value;
 use std::collections::HashMap;
 
+#[allow(clippy::too_many_arguments)]
 pub fn detect_raydium_v4_swap(
     chain: &str,
     slot: u64,
@@ -9,11 +10,14 @@ pub fn detect_raydium_v4_swap(
     signature: &str,
     raw_program_ids: &[String],
     raydium_amm_v4_program_id: &str,
-    tx: &Value, // jsonParsed getTransaction result
+    tx: &Value,
     explain: bool,
 ) -> Option<SwapEvent> {
     // Confirm Raydium program appears in the tx program list (cheap gate).
-    if !raw_program_ids.iter().any(|p| p == raydium_amm_v4_program_id) {
+    if !raw_program_ids
+        .iter()
+        .any(|p| p == raydium_amm_v4_program_id)
+    {
         return None;
     }
 
@@ -23,8 +27,16 @@ pub fn detect_raydium_v4_swap(
         .map(|s| s.to_string())?;
 
     // Extract token balances: pre + post
-    let pre = tx.pointer("/meta/preTokenBalances")?.as_array().cloned().unwrap_or_default();
-    let post = tx.pointer("/meta/postTokenBalances")?.as_array().cloned().unwrap_or_default();
+    let pre = tx
+        .pointer("/meta/preTokenBalances")?
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let post = tx
+        .pointer("/meta/postTokenBalances")?
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
 
     // Build maps mint -> amount for this trader (string amounts in base units).
     let pre_map = token_amounts_by_mint_for_owner(&pre, &trader);
@@ -42,8 +54,14 @@ pub fn detect_raydium_v4_swap(
     all_mints.dedup();
 
     for mint in all_mints {
-        let pre_amt = pre_map.get(&mint).cloned().unwrap_or_else(|| "0".to_string());
-        let post_amt = post_map.get(&mint).cloned().unwrap_or_else(|| "0".to_string());
+        let pre_amt = pre_map
+            .get(&mint)
+            .cloned()
+            .unwrap_or_else(|| "0".to_string());
+        let post_amt = post_map
+            .get(&mint)
+            .cloned()
+            .unwrap_or_else(|| "0".to_string());
 
         let pre_i = parse_i128(&pre_amt)?;
         let post_i = parse_i128(&post_amt)?;
@@ -55,8 +73,14 @@ pub fn detect_raydium_v4_swap(
     }
 
     // Need exactly one in (negative) and one out (positive) for v1.
-    let mut neg = deltas.iter().filter(|(_, d, _, _)| *d < 0).collect::<Vec<_>>();
-    let mut pos = deltas.iter().filter(|(_, d, _, _)| *d > 0).collect::<Vec<_>>();
+    let mut neg = deltas
+        .iter()
+        .filter(|(_, d, _, _)| *d < 0)
+        .collect::<Vec<_>>();
+    let mut pos = deltas
+        .iter()
+        .filter(|(_, d, _, _)| *d > 0)
+        .collect::<Vec<_>>();
 
     if neg.len() != 1 || pos.len() != 1 {
         return None;

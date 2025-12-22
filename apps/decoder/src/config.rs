@@ -12,13 +12,9 @@ pub struct Config {
     pub in_topic: String,
     pub out_sol_deltas_topic: String,
     pub out_token_deltas_topic: String,
-    #[allow(dead_code)]
     pub out_swaps_topic: String,
-    #[allow(dead_code)]
     pub swaps_explain: bool,
-    #[allow(dead_code)]
     pub swaps_explain_limit: u32,
-    #[allow(dead_code)]
     pub raydium_amm_v4_program_id: String,
     pub dlq_topic: Option<String>,
     pub consumer_group: String,
