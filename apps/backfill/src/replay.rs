@@ -11,6 +11,7 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use std::collections::HashSet;
 
 pub async fn replay_file(
     producer: &FutureProducer,
@@ -63,6 +64,8 @@ pub async fn replay_file(
             .unwrap_or(0);
         let is_success = tx.pointer("/meta/err").is_none();
         let block_time = tx.get("blockTime").and_then(|v| v.as_i64());
+        let program_ids = extract_program_ids_from_tx(&tx);
+        let main_program = program_ids.first().cloned();
 
         // Keep replay simple: reuse same extraction as backfill by emitting only core fields
         let event = RawTxEvent {
@@ -76,8 +79,8 @@ pub async fn replay_file(
             is_success,
             fee_lamports: fee,
             compute_units_consumed: None,
-            main_program: None,
-            program_ids: vec![],
+            main_program,
+            program_ids,
         };
 
         let json_event = serde_json::to_string(&event)?;
@@ -98,4 +101,91 @@ pub async fn replay_file(
 
     info!("replay published {} events", count);
     Ok(())
+}
+
+
+fn extract_program_ids_from_tx(tx: &Value) -> Vec<String> {
+    let msg = match tx.pointer("/transaction/message") {
+        Some(m) => m,
+        None => return vec![],
+    };
+
+    let account_keys: Vec<String> = msg
+        .get("accountKeys")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| {
+                    if x.is_string() {
+                        x.as_str().map(|s| s.to_string())
+                    } else {
+                        x.get("pubkey")
+                            .and_then(|p| p.as_str())
+                            .map(|s| s.to_string())
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut out: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    // helper: add pid if not seen
+    fn push_pid(out: &mut Vec<String>, seen: &mut HashSet<String>, pid: &str) {
+        if seen.insert(pid.to_string()) {
+            out.push(pid.to_string());
+        }
+    }
+
+    // helper: resolve programIdIndex into account_keys, then add
+    fn push_idx(
+        out: &mut Vec<String>,
+        seen: &mut HashSet<String>,
+        account_keys: &[String],
+        idx: i64,
+    ) {
+        if idx < 0 {
+            return;
+        }
+        let i = idx as usize;
+        if i < account_keys.len() {
+            let pid = &account_keys[i];
+            if seen.insert(pid.clone()) {
+                out.push(pid.clone());
+            }
+        }
+    }
+
+    // outer instructions (jsonParsed + raw)
+    if let Some(ixs) = msg.get("instructions").and_then(|v| v.as_array()) {
+        for ix in ixs {
+            if let Some(pid) = ix.get("programId").and_then(|v| v.as_str()) {
+                push_pid(&mut out, &mut seen, pid);
+                continue;
+            }
+            if let Some(i) = ix.get("programIdIndex").and_then(|v| v.as_i64()) {
+                push_idx(&mut out, &mut seen, &account_keys, i);
+            }
+        }
+    }
+
+    // inner instructions (jsonParsed + raw)
+    if let Some(inner) = tx.pointer("/meta/innerInstructions").and_then(|v| v.as_array()) {
+        for ii in inner {
+            if let Some(ixs) = ii.get("instructions").and_then(|v| v.as_array()) {
+                for ix in ixs {
+                    if let Some(pid) = ix.get("programId").and_then(|v| v.as_str()) {
+                        push_pid(&mut out, &mut seen, pid);
+                        continue;
+                    }
+                    if let Some(i) = ix.get("programIdIndex").and_then(|v| v.as_i64()) {
+                        push_idx(&mut out, &mut seen, &account_keys, i);
+                    }
+                }
+            }
+        }
+    }
+
+    out
 }
