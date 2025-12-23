@@ -11,7 +11,6 @@ pub fn create_producer(broker: &str) -> Result<FutureProducer> {
         .set("linger.ms", "10")
         .set("message.timeout.ms", "60000")
         .set("retries", "10")
-        // NOTE: we do NOT set compression here to avoid zstd build issues on some setups
         .create()?;
     Ok(producer)
 }
@@ -27,7 +26,6 @@ pub async fn send_json(
         rec = rec.key(k);
     }
 
-    // give Kafka time to deliver
     let _ = producer.send(rec, Duration::from_secs(5)).await;
     Ok(())
 }

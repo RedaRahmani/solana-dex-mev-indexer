@@ -71,6 +71,7 @@ async fn main() -> Result<()> {
     }
 
     let consumer = kafka::create_consumer(&cfg.kafka_broker, &cfg.consumer_group)?;
+    info!("consumer created (group={}, in_topic={})", cfg.consumer_group, cfg.in_topic);
     consumer.subscribe(&[&cfg.in_topic])?;
 
     let producer = kafka::create_producer(&cfg.kafka_broker)?;

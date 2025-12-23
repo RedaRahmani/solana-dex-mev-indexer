@@ -181,7 +181,6 @@ pub async fn backfill_record(
     concurrency: usize,
     out_path: &Path,
 ) -> Result<()> {
-    // open jsonl writer
     let mut f = OpenOptions::new()
         .create(true)
         .append(true)
