@@ -1,0 +1,100 @@
+{
+  "blockTime": 1703001234,
+  "meta": {
+    "err": null,
+    "fee": 5000,
+    "innerInstructions": [
+      {
+        "index": 0,
+        "instructions": [
+          {
+            "programIdIndex": 6,
+            "accounts": [0, 1, 2]
+          }
+        ]
+      }
+    ],
+    "loadedAddresses": {
+      "writable": [
+        "PoolAccount111111111111111111111111111111"
+      ],
+      "readonly": [
+        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ]
+    },
+    "preTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "1000000000",
+          "decimals": 9,
+          "uiAmount": 1.0
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 6,
+          "uiAmount": 0.0
+        }
+      }
+    ],
+    "postTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "500000000",
+          "decimals": 9,
+          "uiAmount": 0.5
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "50000000",
+          "decimals": 6,
+          "uiAmount": 50.0
+        }
+      }
+    ]
+  },
+  "slot": 250000000,
+  "transaction": {
+    "message": {
+      "accountKeys": [
+        "TraderWallet1111111111111111111111111111",
+        "TokenAccount11111111111111111111111111111",
+        "TokenAccount22222222222222222222222222222",
+        "11111111111111111111111111111111"
+      ],
+      "instructions": [
+        {
+          "programIdIndex": 5,
+          "accounts": [0, 1, 2, 3, 4],
+          "data": "SwapInstructionData"
+        }
+      ],
+      "addressTableLookups": [
+        {
+          "accountKey": "LookupTable111111111111111111111111111111",
+          "writableIndexes": [0],
+          "readonlyIndexes": [0, 1]
+        }
+      ]
+    },
+    "signatures": [
+      "5j7s2kP9vZtX8Q3mN4rL6wY1hU9eR8tK2pA7cB6dE5fF3gH4iJ1kL0mN9oP8qR7sT6uV5wX4yZ3"
+    ]
+  },
+  "version": 0
+}
