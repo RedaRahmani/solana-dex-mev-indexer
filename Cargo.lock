@@ -459,6 +459,7 @@ dependencies = [
  "log",
  "rdkafka",
  "reqwest",
+ "schema",
  "serde",
  "serde_json",
  "tokio",

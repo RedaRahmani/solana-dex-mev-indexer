@@ -318,6 +318,13 @@ async fn main() -> Result<()> {
 
                 // Swap detection (best-effort, errors logged but not fatal)
                 if !cfg.raydium_amm_v4_program_id.is_empty() {
+                    // Recompute program_ids from fetched tx for validation (handles v0+ALT)
+                    let recomputed_program_ids = schema::extract_program_ids_from_transaction(&tx);
+                    
+                    // Check if tx is v0 with loadedAddresses for observability
+                    let has_loaded_addresses = tx.pointer("/meta/loadedAddresses").is_some();
+                    let tx_version = tx.pointer("/version").and_then(|v| v.as_u64());
+                    
                     // Determine if we should attach explain (respect limit)
                     let should_explain = cfg.swaps_explain
                         && swaps_emitted.load(Ordering::Relaxed) < cfg.swaps_explain_limit as u64;
@@ -327,7 +334,7 @@ async fn main() -> Result<()> {
                         evt.slot,
                         evt.block_time,
                         &evt.signature,
-                        &evt.program_ids,
+                        &recomputed_program_ids, // Use recomputed IDs (not evt.program_ids)
                         &cfg.raydium_amm_v4_program_id,
                         &tx,
                         should_explain,
@@ -364,7 +371,20 @@ async fn main() -> Result<()> {
                             }
                         }
                         None => {
-                            // Not a swap or multi-hop (silent skip)
+                            // Observability: log when program gate fails for v0+ALT tx
+                            if has_loaded_addresses && tx_version == Some(0) {
+                                if !recomputed_program_ids.contains(&cfg.raydium_amm_v4_program_id) {
+                                    debug!(
+                                        "v0+ALT tx sig={} missing Raydium in recomputed program_ids (possible ALT extraction issue)",
+                                        evt.signature
+                                    );
+                                } else {
+                                    debug!(
+                                        "v0+ALT tx sig={} has Raydium but failed swap detection (multi-hop or invalid pattern)",
+                                        evt.signature
+                                    );
+                                }
+                            }
                         }
                     }
                 }
