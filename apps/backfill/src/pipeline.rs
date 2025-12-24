@@ -9,7 +9,7 @@ use log::{info, warn};
 use rdkafka::producer::FutureProducer;
 use serde_json::{Value, json};
 use std::{
-    collections::{HashSet, hash_map::DefaultHasher},
+    collections::{hash_map::DefaultHasher},
     fs::OpenOptions,
     hash::{Hash, Hasher},
     io::Write,
@@ -18,88 +18,11 @@ use std::{
 };
 use tokio::time::sleep;
 
-fn pick_main_program(program_ids: &[String]) -> Option<String> {
-    let skip = [
-        "ComputeBudget111111111111111111111111111111",
-        "11111111111111111111111111111111",
-        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-    ];
-    program_ids
-        .iter()
-        .find(|p| !skip.contains(&p.as_str()))
-        .cloned()
-}
+// Import ALT-aware helpers from schema crate
+use schema::{extract_program_ids_from_transaction, pick_main_program};
 
-fn extract_program_ids_from_tx(tx: &Value) -> Vec<String> {
-    // We keep it robust: best-effort extraction from json encoding
-    // Structure: result.transaction.message.accountKeys + instructions programIdIndex
-    let msg = match tx.pointer("/transaction/message") {
-        Some(m) => m,
-        None => return vec![],
-    };
-
-    let account_keys: Vec<String> = msg
-        .get("accountKeys")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|x| {
-                    if x.is_string() {
-                        x.as_str().map(|s| s.to_string())
-                    } else {
-                        // sometimes jsonParsed uses objects with pubkey field
-                        x.get("pubkey")
-                            .and_then(|p| p.as_str())
-                            .map(|s| s.to_string())
-                    }
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let mut out = vec![];
-    let mut seen = HashSet::new();
-
-    let mut push_idx = |idx: i64| {
-        if idx < 0 {
-            return;
-        }
-        let i = idx as usize;
-        if i < account_keys.len() {
-            let pid = account_keys[i].clone();
-            if seen.insert(pid.clone()) {
-                out.push(pid);
-            }
-        }
-    };
-
-    // outer instructions
-    if let Some(ixs) = msg.get("instructions").and_then(|v| v.as_array()) {
-        for ix in ixs {
-            if let Some(i) = ix.get("programIdIndex").and_then(|v| v.as_i64()) {
-                push_idx(i);
-            }
-        }
-    }
-
-    // inner instructions
-    if let Some(inner) = tx
-        .pointer("/meta/innerInstructions")
-        .and_then(|v| v.as_array())
-    {
-        for ii in inner {
-            if let Some(ixs) = ii.get("instructions").and_then(|v| v.as_array()) {
-                for ix in ixs {
-                    if let Some(i) = ix.get("programIdIndex").and_then(|v| v.as_i64()) {
-                        push_idx(i);
-                    }
-                }
-            }
-        }
-    }
-
-    out
-}
+// Note: extract_program_ids_from_tx and pick_main_program moved to schema crate
+// to support Address Lookup Table (ALT) resolution for v0 transactions.
 
 fn is_rate_limited_429(err_dbg: &str) -> bool {
     // Your logs show: "status=429 Too Many Requests"
@@ -282,7 +205,8 @@ pub async fn backfill_record(
                     .unwrap_or(0);
                 let is_success = tx.pointer("/meta/err").is_none();
 
-                let program_ids = extract_program_ids_from_tx(&tx);
+                // Use ALT-aware extraction from schema crate
+                let program_ids = extract_program_ids_from_transaction(&tx);
                 let main_program = pick_main_program(&program_ids);
 
                 // guard: never emit empty signature
