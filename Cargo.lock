@@ -1013,12 +1013,14 @@ dependencies = [
  "dotenvy",
  "env_logger 0.11.8",
  "log",
+ "once_cell",
  "rdkafka",
  "reqwest",
  "schema",
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
