@@ -1,0 +1,159 @@
+{
+  "blockTime": 1703001234,
+  "version": 0,
+  "meta": {
+    "err": null,
+    "fee": 5000,
+    "computeUnitsConsumed": 52345,
+    "preBalances": [2000000000, 100000000, 100000000, 100000000],
+    "postBalances": [1999995000, 100000000, 100000000, 100000000],
+    "loadedAddresses": {
+      "writable": [
+        "VaultATokenAccount1111111111111111111111",
+        "VaultBTokenAccount1111111111111111111111"
+      ],
+      "readonly": [
+        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ]
+    },
+    "preTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet2222222222222222222222222222",
+        "uiTokenAmount": {
+          "amount": "2000000000",
+          "decimals": 9,
+          "uiAmount": 2.0
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet2222222222222222222222222222",
+        "uiTokenAmount": {
+          "amount": "100000000",
+          "decimals": 6,
+          "uiAmount": 100.0
+        }
+      },
+      {
+        "accountIndex": 4,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "PoolVaultOwner111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "100000000000",
+          "decimals": 9,
+          "uiAmount": 100.0
+        }
+      },
+      {
+        "accountIndex": 5,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "PoolVaultOwner111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "10000000000",
+          "decimals": 6,
+          "uiAmount": 10000.0
+        }
+      }
+    ],
+    "postTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet2222222222222222222222222222",
+        "uiTokenAmount": {
+          "amount": "1000000000",
+          "decimals": 9,
+          "uiAmount": 1.0
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet2222222222222222222222222222",
+        "uiTokenAmount": {
+          "amount": "197000000",
+          "decimals": 6,
+          "uiAmount": 197.0
+        }
+      },
+      {
+        "accountIndex": 4,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "PoolVaultOwner111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "101000000000",
+          "decimals": 9,
+          "uiAmount": 101.0
+        }
+      },
+      {
+        "accountIndex": 5,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "PoolVaultOwner111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "9903000000",
+          "decimals": 6,
+          "uiAmount": 9903.0
+        }
+      }
+    ],
+    "innerInstructions": [
+      {
+        "index": 0,
+        "instructions": [
+          {
+            "programIdIndex": 7,
+            "accounts": [1, 4],
+            "data": "TransferSOL",
+            "stackHeight": 2
+          },
+          {
+            "programIdIndex": 7,
+            "accounts": [5, 2],
+            "data": "TransferUSDC",
+            "stackHeight": 2
+          }
+        ]
+      }
+    ],
+    "logMessages": [
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 invoke [1]",
+      "Program log: Instruction: Swap",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 success"
+    ]
+  },
+  "slot": 250000001,
+  "transaction": {
+    "message": {
+      "accountKeys": [
+        "TraderWallet2222222222222222222222222222",
+        "UserSOLTokenAccountV0_11111111111111111",
+        "UserUSDCTokenAccountV0_1111111111111111",
+        "PoolAccountV0_1111111111111111111111111"
+      ],
+      "instructions": [
+        {
+          "programIdIndex": 6,
+          "accounts": [0, 3, 1, 2, 4, 5, 6, 7],
+          "data": "3kBdH3fQRgLzV0"
+        }
+      ],
+      "addressTableLookups": [
+        {
+          "accountKey": "LookupTableRaydiumAMM11111111111111111111",
+          "writableIndexes": [0, 1],
+          "readonlyIndexes": [0, 1]
+        }
+      ]
+    },
+    "signatures": [
+      "3V0RaydiumSwapALT1111111111111111111111111111111111111111111111111"
+    ]
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "blockTime": 1703001500,
+  "version": 0,
+  "meta": {
+    "err": null,
+    "fee": 10000,
+    "computeUnitsConsumed": 150000,
+    "preBalances": [5000000000, 100000000, 100000000, 100000000, 100000000],
+    "postBalances": [4999990000, 100000000, 100000000, 100000000, 100000000],
+    "loadedAddresses": {
+      "writable": [
+        "VaultA_Pool1_1111111111111111111111111111",
+        "VaultB_Pool1_1111111111111111111111111111",
+        "VaultA_Pool2_1111111111111111111111111111",
+        "VaultB_Pool2_1111111111111111111111111111"
+      ],
+      "readonly": [
+        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+      ]
+    },
+    "preTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "5000000000",
+          "decimals": 9,
+          "uiAmount": 5.0
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 9,
+          "uiAmount": 0.0
+        }
+      },
+      {
+        "accountIndex": 3,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 6,
+          "uiAmount": 0.0
+        }
+      },
+      {
+        "accountIndex": 5,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "Pool1Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "100000000000",
+          "decimals": 9,
+          "uiAmount": 100.0
+        }
+      },
+      {
+        "accountIndex": 6,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "Pool1Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "80000000000",
+          "decimals": 9,
+          "uiAmount": 80.0
+        }
+      },
+      {
+        "accountIndex": 7,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "Pool2Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "50000000000",
+          "decimals": 9,
+          "uiAmount": 50.0
+        }
+      },
+      {
+        "accountIndex": 8,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "Pool2Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "5000000000",
+          "decimals": 6,
+          "uiAmount": 5000.0
+        }
+      }
+    ],
+    "postTokenBalances": [
+      {
+        "accountIndex": 1,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 9,
+          "uiAmount": 0.0
+        }
+      },
+      {
+        "accountIndex": 2,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 9,
+          "uiAmount": 0.0
+        }
+      },
+      {
+        "accountIndex": 3,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "MultiHopTrader111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "485000000",
+          "decimals": 6,
+          "uiAmount": 485.0
+        }
+      },
+      {
+        "accountIndex": 5,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "Pool1Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "105000000000",
+          "decimals": 9,
+          "uiAmount": 105.0
+        }
+      },
+      {
+        "accountIndex": 6,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "Pool1Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "75850000000",
+          "decimals": 9,
+          "uiAmount": 75.85
+        }
+      },
+      {
+        "accountIndex": 7,
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "owner": "Pool2Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "54150000000",
+          "decimals": 9,
+          "uiAmount": 54.15
+        }
+      },
+      {
+        "accountIndex": 8,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "Pool2Vault11111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "4515000000",
+          "decimals": 6,
+          "uiAmount": 4515.0
+        }
+      }
+    ],
+    "innerInstructions": [
+      {
+        "index": 0,
+        "instructions": [
+          {
+            "programIdIndex": 9,
+            "accounts": [1, 5],
+            "data": "Hop1Transfer",
+            "stackHeight": 2
+          },
+          {
+            "programIdIndex": 9,
+            "accounts": [6, 2],
+            "data": "Hop1Receive",
+            "stackHeight": 2
+          },
+          {
+            "programIdIndex": 9,
+            "accounts": [2, 7],
+            "data": "Hop2Transfer",
+            "stackHeight": 2
+          },
+          {
+            "programIdIndex": 9,
+            "accounts": [8, 3],
+            "data": "Hop2Receive",
+            "stackHeight": 2
+          }
+        ]
+      }
+    ],
+    "logMessages": [
+      "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 invoke [1]",
+      "Program log: Instruction: Route",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 invoke [2]",
+      "Program log: Instruction: Swap",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 success",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 invoke [2]",
+      "Program log: Instruction: Swap",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 success",
+      "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 success"
+    ]
+  },
+  "slot": 250000100,
+  "transaction": {
+    "message": {
+      "accountKeys": [
+        "MultiHopTrader111111111111111111111111111",
+        "UserSOLAccount_MultiHop_1111111111111111",
+        "UsermSOLAccount_MultiHop_111111111111111",
+        "UserUSDCAccount_MultiHop_111111111111111",
+        "Pool1Account_SOL_mSOL_11111111111111111"
+      ],
+      "instructions": [
+        {
+          "programIdIndex": 10,
+          "accounts": [0, 4, 1, 2, 3, 5, 6, 7, 8, 9],
+          "data": "JupiterRouteData_MultiHop"
+        }
+      ],
+      "addressTableLookups": [
+        {
+          "accountKey": "JupiterLookupTable111111111111111111111111",
+          "writableIndexes": [0, 1, 2, 3],
+          "readonlyIndexes": [0, 1, 2]
+        }
+      ]
+    },
+    "signatures": [
+      "4MultiHopSwapJupiterRaydium111111111111111111111111111111111111111"
+    ]
+  }
+}

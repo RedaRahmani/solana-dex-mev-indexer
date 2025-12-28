@@ -1,0 +1,144 @@
+{
+  "blockTime": 1703001100,
+  "meta": {
+    "err": null,
+    "fee": 5000,
+    "computeUnitsConsumed": 45678,
+    "preBalances": [1000000000, 500000000, 100000000, 200000000],
+    "postBalances": [999995000, 500000000, 100000000, 200000000],
+    "preTokenBalances": [
+      {
+        "accountIndex": 2,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "1000000000",
+          "decimals": 9,
+          "uiAmount": 1.0
+        }
+      },
+      {
+        "accountIndex": 3,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "0",
+          "decimals": 6,
+          "uiAmount": 0.0
+        }
+      },
+      {
+        "accountIndex": 6,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "VaultA1111111111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "50000000000",
+          "decimals": 9,
+          "uiAmount": 50.0
+        }
+      },
+      {
+        "accountIndex": 7,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "VaultB1111111111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "5000000000",
+          "decimals": 6,
+          "uiAmount": 5000.0
+        }
+      }
+    ],
+    "postTokenBalances": [
+      {
+        "accountIndex": 2,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "500000000",
+          "decimals": 9,
+          "uiAmount": 0.5
+        }
+      },
+      {
+        "accountIndex": 3,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "TraderWallet1111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "48500000",
+          "decimals": 6,
+          "uiAmount": 48.5
+        }
+      },
+      {
+        "accountIndex": 6,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "VaultA1111111111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "50500000000",
+          "decimals": 9,
+          "uiAmount": 50.5
+        }
+      },
+      {
+        "accountIndex": 7,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "owner": "VaultB1111111111111111111111111111111111111",
+        "uiTokenAmount": {
+          "amount": "4951500000",
+          "decimals": 6,
+          "uiAmount": 4951.5
+        }
+      }
+    ],
+    "innerInstructions": [
+      {
+        "index": 0,
+        "instructions": [
+          {
+            "programIdIndex": 4,
+            "accounts": [2, 6],
+            "data": "Transfer1"
+          },
+          {
+            "programIdIndex": 4,
+            "accounts": [7, 3],
+            "data": "Transfer2"
+          }
+        ]
+      }
+    ],
+    "logMessages": [
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 invoke [1]",
+      "Program log: Instruction: Swap",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+      "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+      "Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 success"
+    ]
+  },
+  "slot": 249999999,
+  "transaction": {
+    "message": {
+      "accountKeys": [
+        "TraderWallet1111111111111111111111111111",
+        "PoolAccount58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUW",
+        "UserSOLTokenAccount111111111111111111111",
+        "UserUSDCTokenAccount11111111111111111111",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+        "VaultATokenAccount1111111111111111111111",
+        "VaultBTokenAccount1111111111111111111111",
+        "11111111111111111111111111111111"
+      ],
+      "instructions": [
+        {
+          "programIdIndex": 5,
+          "accounts": [0, 1, 2, 3, 4, 5, 6, 7],
+          "data": "3kBdH3fQRgLz"
+        }
+      ]
+    },
+    "signatures": [
+      "2LegacyRaydiumSwap111111111111111111111111111111111111111111111111"
+    ]
+  }
+}
