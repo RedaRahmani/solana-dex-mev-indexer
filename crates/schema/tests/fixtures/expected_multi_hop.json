@@ -1,0 +1,25 @@
+[
+  {
+    "schema_version": 2,
+    "chain": "solana-mainnet",
+    "slot": 250000100,
+    "block_time": 1703001500,
+    "signature": "4MultiHopSwapJupiterRaydium111111111111111111111111111111111111111",
+    "index_in_block": 0,
+    "index_in_tx": 0,
+    "hop_index": 0,
+    "venue": "raydium",
+    "pool_id": null,
+    "trader": "MultiHopTrader111111111111111111111111111",
+    "in_mint": "So11111111111111111111111111111111111111112",
+    "in_amount": "5000000000",
+    "out_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "out_amount": "485000000",
+    "fee_mint": null,
+    "fee_amount": null,
+    "route_id": "4MultiHopSwapJu:0",
+    "confidence": 60,
+    "confidence_reasons_expected": ["program_gate", "trader_owner", "amounts", "tx_ok"],
+    "notes": "Multi-hop swap: SOL -> mSOL -> USDC via Jupiter aggregator calling Raydium pools"
+  }
+]

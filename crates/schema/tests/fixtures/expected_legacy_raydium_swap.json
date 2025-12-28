@@ -1,0 +1,24 @@
+[
+  {
+    "schema_version": 2,
+    "chain": "solana-mainnet",
+    "slot": 249999999,
+    "block_time": 1703001100,
+    "signature": "2LegacyRaydiumSwap111111111111111111111111111111111111111111111111",
+    "index_in_block": 0,
+    "index_in_tx": 0,
+    "hop_index": 0,
+    "venue": "raydium",
+    "pool_id": "PoolAccount58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUW",
+    "trader": "TraderWallet1111111111111111111111111111",
+    "in_mint": "So11111111111111111111111111111111111111112",
+    "in_amount": "500000000",
+    "out_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "out_amount": "48500000",
+    "fee_mint": null,
+    "fee_amount": null,
+    "route_id": null,
+    "confidence": 85,
+    "confidence_reasons_expected": ["program_gate", "pool_from_ix", "trader_owner", "amounts", "tx_ok", "single_hop"]
+  }
+]

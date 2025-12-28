@@ -1,0 +1,25 @@
+[
+  {
+    "schema_version": 2,
+    "chain": "solana-mainnet",
+    "slot": 250000001,
+    "block_time": 1703001234,
+    "signature": "3V0RaydiumSwapALT1111111111111111111111111111111111111111111111111",
+    "index_in_block": 0,
+    "index_in_tx": 0,
+    "hop_index": 0,
+    "venue": "raydium",
+    "pool_id": "PoolAccountV0_1111111111111111111111111",
+    "trader": "TraderWallet2222222222222222222222222222",
+    "in_mint": "So11111111111111111111111111111111111111112",
+    "in_amount": "1000000000",
+    "out_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "out_amount": "97000000",
+    "fee_mint": null,
+    "fee_amount": null,
+    "route_id": null,
+    "confidence": 85,
+    "confidence_reasons_expected": ["program_gate", "pool_from_ix", "trader_owner", "amounts", "tx_ok", "single_hop"],
+    "notes": "v0 transaction with ALT - Raydium program loaded via Address Lookup Table"
+  }
+]
