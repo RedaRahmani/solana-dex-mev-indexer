@@ -9,7 +9,7 @@ use log::{info, warn};
 use rdkafka::producer::FutureProducer;
 use serde_json::{Value, json};
 use std::{
-    collections::{hash_map::DefaultHasher},
+    collections::hash_map::DefaultHasher,
     fs::OpenOptions,
     hash::{Hash, Hasher},
     io::Write,
