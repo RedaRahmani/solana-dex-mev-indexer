@@ -1,8 +1,10 @@
 use anyhow::{Result, anyhow};
+use schema::{Profile, validate_mainnet_url};
 use std::env;
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    pub profile: Profile,
     pub rpc_primary_url: String,
     pub rpc_fallback_urls: Vec<String>,
     pub rpc_concurrency: u32,
@@ -31,15 +33,21 @@ fn parse_bool(v: Option<String>, default: bool) -> bool {
 }
 
 pub fn load() -> Result<Config> {
+    // Parse PROFILE first (defaults to local)
+    let profile = Profile::from_env()?;
+
     let include_failed = env::var("INCLUDE_FAILED")
         .ok()
         .map(|s| matches!(s.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
         .unwrap_or(false);
 
-    // RPC URL precedence: RPC_PRIMARY_URL > RPC_URL > default mainnet
+    // RPC URL precedence: RPC_PRIMARY_URL > RPC_URL > profile default
     let rpc_primary_url = env::var("RPC_PRIMARY_URL")
         .or_else(|_| env::var("RPC_URL"))
-        .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
+        .unwrap_or_else(|_| profile.default_rpc_url().to_string());
+
+    // Validate RPC URL is appropriate for profile
+    validate_mainnet_url(profile, &rpc_primary_url, "RPC_PRIMARY_URL")?;
 
     // Parse comma-separated fallback URLs
     let rpc_fallback_urls = env::var("RPC_FALLBACK_URLS")
@@ -50,6 +58,11 @@ pub fn load() -> Result<Config> {
                 .collect()
         })
         .unwrap_or_default();
+
+    // Validate fallback URLs too
+    for url in &rpc_fallback_urls {
+        validate_mainnet_url(profile, url, "RPC_FALLBACK_URLS")?;
+    }
 
     let rpc_concurrency = env::var("RPC_CONCURRENCY")
         .ok()
@@ -67,14 +80,20 @@ pub fn load() -> Result<Config> {
         .unwrap_or(1);
 
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "localhost:19092".to_string());
-    let in_topic = env::var("KAFKA_IN_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
-    let out_sol_deltas_topic =
-        env::var("KAFKA_OUT_SOL_DELTAS_TOPIC").unwrap_or_else(|_| "sol_balance_deltas".to_string());
-    let out_token_deltas_topic = env::var("KAFKA_OUT_TOKEN_DELTAS_TOPIC")
-        .unwrap_or_else(|_| "sol_token_balance_deltas".to_string());
 
-    let out_swaps_topic =
-        env::var("KAFKA_OUT_SWAPS_TOPIC").unwrap_or_else(|_| "sol_swaps".to_string());
+    // Topic overrides: explicit env > profile defaults
+    let in_topic = env::var("KAFKA_IN_TOPIC")
+        .or_else(|_| env::var("KAFKA_TOPIC_RAW_TXS"))
+        .unwrap_or_else(|_| profile.default_kafka_topic_raw_txs().to_string());
+
+    let out_sol_deltas_topic = env::var("KAFKA_OUT_SOL_DELTAS_TOPIC")
+        .unwrap_or_else(|_| profile.default_kafka_topic_sol_deltas().to_string());
+
+    let out_token_deltas_topic = env::var("KAFKA_OUT_TOKEN_DELTAS_TOPIC")
+        .unwrap_or_else(|_| profile.default_kafka_topic_token_deltas().to_string());
+
+    let out_swaps_topic = env::var("KAFKA_OUT_SWAPS_TOPIC")
+        .unwrap_or_else(|_| profile.default_kafka_topic_swaps().to_string());
 
     let swaps_explain = parse_bool(env::var("SWAPS_EXPLAIN").ok(), false);
     let swaps_explain_limit = env::var("SWAPS_EXPLAIN_LIMIT")
@@ -86,7 +105,12 @@ pub fn load() -> Result<Config> {
     // Keep it empty by default so current decoder flows keep working.
     let raydium_amm_v4_program_id =
         env::var("RAYDIUM_AMM_V4_PROGRAM_ID").unwrap_or_else(|_| "".to_string());
-    let dlq_topic = env::var("KAFKA_DLQ_TOPIC").ok();
+
+    let dlq_topic = env::var("KAFKA_DLQ_TOPIC")
+        .or_else(|_| env::var("KAFKA_TOPIC_DLQ"))
+        .ok()
+        .or_else(|| Some(profile.default_kafka_topic_dlq().to_string()));
+
     let consumer_group = env::var("KAFKA_GROUP").unwrap_or_else(|_| "decoder_v1".to_string());
 
     if kafka_broker.trim().is_empty() {
@@ -100,6 +124,7 @@ pub fn load() -> Result<Config> {
     }
 
     Ok(Config {
+        profile,
         rpc_primary_url,
         rpc_fallback_urls,
         rpc_concurrency,
