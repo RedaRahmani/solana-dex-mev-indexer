@@ -1,10 +1,17 @@
 pub mod alt_resolver;
 pub mod dex_swap;
+pub mod profile;
 pub mod swap;
 pub mod tx_facts;
 
 // Legacy swap event (deprecated, use DexSwapV1)
 pub use swap::SwapEvent;
+
+// Profile (local/mainnet) configuration
+pub use profile::{
+    Profile, SOLANA_MAINNET_GENESIS_HASH, url_requires_tls, validate_mainnet_url,
+    verify_mainnet_genesis,
+};
 
 // ALT resolution utilities
 pub use alt_resolver::{
