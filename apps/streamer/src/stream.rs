@@ -59,11 +59,16 @@ fn extract_program_ids(
 }
 
 pub async fn run_once(cfg: &Config, producer: &FutureProducer, m: &Metrics) -> Result<()> {
-    let mut client = GeyserGrpcClient::build_from_shared(cfg.geyser_endpoint.clone())?
-        .x_token(cfg.geyser_x_token.clone())?
-        .tls_config(ClientTlsConfig::new().with_native_roots())?
-        .connect()
-        .await?;
+    // Build gRPC client with conditional TLS
+    let mut builder = GeyserGrpcClient::build_from_shared(cfg.geyser_endpoint.clone())?
+        .x_token(cfg.geyser_x_token.clone())?;
+
+    // Only enable TLS if the endpoint uses https://
+    if cfg.geyser_use_tls {
+        builder = builder.tls_config(ClientTlsConfig::new().with_native_roots())?;
+    }
+
+    let mut client = builder.connect().await?;
 
     let (mut sub_tx, mut sub_rx) = client.subscribe().await?;
 
