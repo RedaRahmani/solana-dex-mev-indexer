@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
+use schema::{Profile, validate_mainnet_url};
 use std::{env, path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
@@ -31,6 +32,7 @@ pub struct Cli {
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    pub profile: Profile,
     pub rpc_url: String,
     pub kafka_broker: String,
     pub kafka_topic: String,
@@ -39,15 +41,29 @@ pub struct Config {
 }
 
 pub fn load(cli: &Cli) -> Result<Config> {
+    // Parse PROFILE first (defaults to local)
+    let profile = Profile::from_env()?;
+
+    // RPC URL precedence: CLI arg > RPC_URL env > profile default
     let rpc_url = cli
         .rpc_url
         .clone()
         .or_else(|| env::var("RPC_URL").ok())
-        .unwrap_or_else(|| "https://api.mainnet-beta.solana.com".to_string());
+        .unwrap_or_else(|| profile.default_rpc_url().to_string());
+
+    // Validate RPC URL is appropriate for profile
+    validate_mainnet_url(profile, &rpc_url, "RPC_URL")?;
 
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "127.0.0.1:19092".to_string());
-    let kafka_topic = env::var("KAFKA_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
-    let dlq_topic = env::var("KAFKA_DLQ_TOPIC").unwrap_or_else(|_| "sol_raw_txs_dlq".to_string());
+
+    // Topic overrides: KAFKA_TOPIC_RAW_TXS > KAFKA_TOPIC > profile default
+    let kafka_topic = env::var("KAFKA_TOPIC_RAW_TXS")
+        .or_else(|_| env::var("KAFKA_TOPIC"))
+        .unwrap_or_else(|_| profile.default_kafka_topic_raw_txs().to_string());
+
+    let dlq_topic = env::var("KAFKA_DLQ_TOPIC")
+        .or_else(|_| env::var("KAFKA_TOPIC_DLQ"))
+        .unwrap_or_else(|_| profile.default_kafka_topic_dlq().to_string());
 
     // keep consistent with your existing schema
     let chain = env::var("CHAIN").unwrap_or_else(|_| "solana-mainnet".to_string());
@@ -60,6 +76,7 @@ pub fn load(cli: &Cli) -> Result<Config> {
     }
 
     Ok(Config {
+        profile,
         rpc_url,
         kafka_broker,
         kafka_topic,
