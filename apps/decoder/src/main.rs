@@ -37,6 +37,7 @@ async fn main() -> Result<()> {
 
     // Log comprehensive config on startup
     info!("decoder starting:");
+    info!("  profile={:?}", cfg.profile);
     info!("  kafka_broker={}", cfg.kafka_broker);
     info!("  in_topic={}", cfg.in_topic);
     info!("  out_sol_deltas={}", cfg.out_sol_deltas_topic);
@@ -55,6 +56,13 @@ async fn main() -> Result<()> {
     info!("  rpc_concurrency={}", cfg.rpc_concurrency);
     info!("  rpc_min_delay_ms={}", cfg.rpc_min_delay_ms);
     info!("  rpc_max_tx_version={}", cfg.rpc_max_tx_version);
+
+    // Mainnet genesis hash sanity check
+    if cfg.profile == schema::Profile::Mainnet {
+        info!("  verifying mainnet genesis hash...");
+        schema::verify_mainnet_genesis(&cfg.rpc_primary_url).await?;
+        info!("  genesis hash verified ✓");
+    }
 
     // Log swap detection config
     if !cfg.raydium_amm_v4_program_id.is_empty() {
