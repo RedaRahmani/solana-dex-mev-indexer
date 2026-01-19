@@ -1,11 +1,14 @@
 use anyhow::{Result, anyhow};
+use schema::{Profile, validate_mainnet_url};
 use std::{env, time::Duration};
 use yellowstone_grpc_proto::prelude::CommitmentLevel;
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    pub profile: Profile,
     pub geyser_endpoint: String,
     pub geyser_x_token: Option<String>,
+    pub geyser_use_tls: bool,
 
     pub kafka_broker: String,
     pub kafka_topic: String,
@@ -39,12 +42,27 @@ fn parse_commitment(s: &str) -> Result<CommitmentLevel> {
 }
 
 pub fn load() -> Result<Config> {
-    let geyser_endpoint =
-        env::var("GEYSER_ENDPOINT").map_err(|_| anyhow!("Missing GEYSER_ENDPOINT"))?;
+    // Parse PROFILE first (defaults to local)
+    let profile = Profile::from_env()?;
+
+    // GEYSER_ENDPOINT: use env override or profile default
+    let geyser_endpoint = env::var("GEYSER_ENDPOINT")
+        .unwrap_or_else(|_| profile.default_geyser_endpoint().to_string());
+
+    // Validate endpoint is appropriate for profile
+    validate_mainnet_url(profile, &geyser_endpoint, "GEYSER_ENDPOINT")?;
+
+    // Determine if TLS is needed based on URL scheme
+    let geyser_use_tls = schema::url_requires_tls(&geyser_endpoint);
+
     let geyser_x_token = env::var("GEYSER_X_TOKEN").ok();
 
     let kafka_broker = env::var("KAFKA_BROKER").unwrap_or_else(|_| "localhost:19092".to_string());
-    let kafka_topic = env::var("KAFKA_TOPIC").unwrap_or_else(|_| "sol_raw_txs".to_string());
+
+    // KAFKA_TOPIC_RAW_TXS overrides KAFKA_TOPIC, both override profile default
+    let kafka_topic = env::var("KAFKA_TOPIC_RAW_TXS")
+        .or_else(|_| env::var("KAFKA_TOPIC"))
+        .unwrap_or_else(|_| profile.default_kafka_topic_raw_txs().to_string());
 
     let required_accounts = env::var("REQUIRED_ACCOUNTS")
         .unwrap_or_else(|_| "".to_string())
@@ -59,8 +77,10 @@ pub fn load() -> Result<Config> {
         parse_commitment(&env::var("COMMITMENT").unwrap_or_else(|_| "processed".to_string()))?;
 
     Ok(Config {
+        profile,
         geyser_endpoint,
         geyser_x_token,
+        geyser_use_tls,
         kafka_broker,
         kafka_topic,
         required_accounts,
