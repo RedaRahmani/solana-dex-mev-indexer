@@ -22,6 +22,13 @@ async fn main() -> Result<()> {
     let cli = config::Cli::parse();
     let cfg = config::load(&cli)?;
 
+    info!("backfill starting:");
+    info!("  profile={:?}", cfg.profile);
+    info!("  rpc_url={}", cfg.rpc_url);
+    info!("  kafka_broker={}", cfg.kafka_broker);
+    info!("  kafka_topic={}", cfg.kafka_topic);
+    info!("  dlq_topic={}", cfg.dlq_topic);
+
     let producer = kafka::create_producer(&cfg.kafka_broker)?;
 
     // Ensure data dir exists if using --out data/...
@@ -30,7 +37,6 @@ async fn main() -> Result<()> {
     {
         std::fs::create_dir_all(parent)?;
     }
-    info!("using rpc_url={}", cfg.rpc_url);
 
     info!(
         "mode: {}",
@@ -53,7 +59,13 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // backfill/record mode
+    // backfill/record mode — verify genesis if mainnet
+    if cfg.profile == schema::Profile::Mainnet {
+        info!("  verifying mainnet genesis hash...");
+        schema::verify_mainnet_genesis(&cfg.rpc_url).await?;
+        info!("  genesis hash verified ✓");
+    }
+
     let rpc = rpc::RpcClient::new(cfg.rpc_url.clone());
 
     let out = cli.out.expect("--out required in backfill mode");
