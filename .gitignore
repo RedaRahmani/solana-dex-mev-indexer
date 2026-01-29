@@ -7,3 +7,4 @@ artifacts\
 .env.*
 data/
 *.jsonl
+/docs/RUNBOOK.md
