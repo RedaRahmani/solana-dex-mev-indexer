@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS solana.sol_swaps_queue
 
   index_in_block UInt32,
   index_in_tx UInt16,
-  hop_index UInt8 DEFAULT 0,
+  hop_index UInt8,
 
   venue LowCardinality(String),
   pool_id Nullable(String),
@@ -32,13 +32,13 @@ CREATE TABLE IF NOT EXISTS solana.sol_swaps_queue
   route_id Nullable(String),
 
   confidence UInt8,
-  confidence_reasons UInt16 DEFAULT 0,
+  confidence_reasons UInt16,
   explain Nullable(String)
 )
 ENGINE = Kafka
 SETTINGS
   kafka_broker_list = 'kafka:9092',
-  kafka_topic_list = 'sol_swaps',
+  kafka_topic_list = 'sol_swaps_v2',
   kafka_group_name = 'sol_swaps_v2',
   kafka_format = 'JSONEachRow',
   kafka_num_consumers = 1;
