@@ -1,9 +1,5 @@
-use schema::{
-    ConfidenceReasons, DexSwapV1, DexSwapV1Builder, TxFacts,
-    RAYDIUM_AMM_V4_PROGRAM_ID,
-};
+use schema::{ConfidenceReasons, DexSwapV1, DexSwapV1Builder, RAYDIUM_AMM_V4_PROGRAM_ID, TxFacts};
 use std::collections::HashMap;
-
 
 mod raydium_accounts {
     /// Pool/AMM account (index 1 in swap instruction)
@@ -75,7 +71,11 @@ pub fn parse_raydium_v4_swaps(
     let route_id = if is_multi_hop {
         // Hash of signature + first outer_ix_index
         let first_ix = hops.first().map(|h| h.outer_ix_index).unwrap_or(0);
-        Some(format!("{}:{}", &facts.signature[..16.min(facts.signature.len())], first_ix))
+        Some(format!(
+            "{}:{}",
+            &facts.signature[..16.min(facts.signature.len())],
+            first_ix
+        ))
     } else {
         None
     };
@@ -301,12 +301,14 @@ fn verify_vault_match(
     let vault_b_idx = ix.accounts[raydium_accounts::VAULT_B];
 
     // Find vault deltas
-    let vault_a_delta = facts.token_balance_deltas.iter().find(|d| {
-        d.account_index as usize == vault_a_idx
-    });
-    let vault_b_delta = facts.token_balance_deltas.iter().find(|d| {
-        d.account_index as usize == vault_b_idx
-    });
+    let vault_a_delta = facts
+        .token_balance_deltas
+        .iter()
+        .find(|d| d.account_index as usize == vault_a_idx);
+    let vault_b_delta = facts
+        .token_balance_deltas
+        .iter()
+        .find(|d| d.account_index as usize == vault_b_idx);
 
     // Verify: user's in should match vault's in (positive), user's out should match vault's out (negative)
     match (vault_a_delta, vault_b_delta) {
@@ -441,7 +443,10 @@ mod tests {
         let swap = &swaps[0];
         assert_eq!(swap.venue, "raydium");
         assert_eq!(swap.in_mint, "So11111111111111111111111111111111111111112");
-        assert_eq!(swap.out_mint, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        assert_eq!(
+            swap.out_mint,
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        );
         assert_eq!(swap.in_amount, "500000000");
         assert_eq!(swap.out_amount, "50000000");
     }
@@ -477,6 +482,10 @@ mod tests {
         reasons.set(ConfidenceReasons::TX_SUCCESS);
 
         let confidence = reasons.to_confidence_u8();
-        assert!(confidence >= 75, "Confidence should be >= 75, got {}", confidence);
+        assert!(
+            confidence >= 75,
+            "Confidence should be >= 75, got {}",
+            confidence
+        );
     }
 }

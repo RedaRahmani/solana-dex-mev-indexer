@@ -160,7 +160,10 @@ impl TxFacts {
 
         let version = tx.get("version").and_then(|v| v.as_u64()).map(|v| v as u8);
 
-        let is_success = tx.pointer("/meta/err").map(|e| e.is_null()).unwrap_or(false);
+        let is_success = tx
+            .pointer("/meta/err")
+            .map(|e| e.is_null())
+            .unwrap_or(false);
 
         let fee = tx
             .pointer("/meta/fee")
@@ -288,9 +291,13 @@ impl TxFacts {
                     .map(|h| h as u8)
                     .unwrap_or(1);
 
-                if let Some(parsed) =
-                    Self::parse_single_instruction(ix, account_keys, Some(outer_idx), stack_depth, inner_idx)
-                {
+                if let Some(parsed) = Self::parse_single_instruction(
+                    ix,
+                    account_keys,
+                    Some(outer_idx),
+                    stack_depth,
+                    inner_idx,
+                ) {
                     out.push(parsed);
                 }
             }
@@ -329,7 +336,10 @@ impl TxFacts {
             .unwrap_or_default();
 
         // Get data
-        let data = ix.get("data").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let data = ix
+            .get("data")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         Some(ParsedInstruction {
             program_id,
@@ -349,7 +359,10 @@ impl TxFacts {
                 .filter_map(|b| {
                     let account_index = b.get("accountIndex")?.as_u64()? as u32;
                     let mint = b.get("mint")?.as_str()?.to_string();
-                    let owner = b.get("owner").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    let owner = b
+                        .get("owner")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                     let amount = b
                         .pointer("/uiTokenAmount/amount")
                         .and_then(|v| v.as_str())
@@ -373,10 +386,7 @@ impl TxFacts {
         }
     }
 
-    fn compute_token_deltas(
-        pre: &[TokenBalance],
-        post: &[TokenBalance],
-    ) -> Vec<TokenBalanceDelta> {
+    fn compute_token_deltas(pre: &[TokenBalance], post: &[TokenBalance]) -> Vec<TokenBalanceDelta> {
         // Key: (account_index, mint)
         let mut pre_map: HashMap<(u32, String), &TokenBalance> = HashMap::new();
         for b in pre {
@@ -404,12 +414,8 @@ impl TxFacts {
             let pre_bal = pre_map.get(&(account_index, mint.clone()));
             let post_bal = post_map.get(&(account_index, mint.clone()));
 
-            let pre_amount: u128 = pre_bal
-                .map(|b| b.amount.parse().unwrap_or(0))
-                .unwrap_or(0);
-            let post_amount: u128 = post_bal
-                .map(|b| b.amount.parse().unwrap_or(0))
-                .unwrap_or(0);
+            let pre_amount: u128 = pre_bal.map(|b| b.amount.parse().unwrap_or(0)).unwrap_or(0);
+            let post_amount: u128 = post_bal.map(|b| b.amount.parse().unwrap_or(0)).unwrap_or(0);
 
             if pre_amount == post_amount {
                 continue;
@@ -501,7 +507,9 @@ impl TxFacts {
 
     /// Check if a program was invoked in this transaction
     pub fn has_program(&self, program_id: &str) -> bool {
-        self.all_instructions.iter().any(|ix| ix.program_id == program_id)
+        self.all_instructions
+            .iter()
+            .any(|ix| ix.program_id == program_id)
     }
 
     /// Get account pubkey by index

@@ -2,7 +2,6 @@
 ///
 /// This module provides utilities to correctly extract program IDs from Solana transactions,
 /// handling both legacy transactions and v0 transactions with Address Lookup Tables.
-
 use serde_json::Value;
 use std::collections::HashSet;
 
@@ -124,10 +123,12 @@ pub fn extract_program_ids_from_transaction(tx: &Value) -> Vec<String> {
     }
 
     // Process inner instructions
-    if let Some(inner_array) = tx.pointer("/meta/innerInstructions").and_then(|v| v.as_array()) {
+    if let Some(inner_array) = tx
+        .pointer("/meta/innerInstructions")
+        .and_then(|v| v.as_array())
+    {
         for inner_group in inner_array {
-            if let Some(instructions) = inner_group.get("instructions").and_then(|v| v.as_array())
-            {
+            if let Some(instructions) = inner_group.get("instructions").and_then(|v| v.as_array()) {
                 for ix in instructions {
                     // jsonParsed format: programId field
                     if let Some(pid) = ix.get("programId").and_then(|v| v.as_str()) {

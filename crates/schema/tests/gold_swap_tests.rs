@@ -12,9 +12,8 @@ use std::fs;
 
 // Re-export for tests
 use schema::{
-    ConfidenceReasons, DexSwapV1Builder, TxFacts,
-    extract_program_ids_from_transaction, resolve_full_account_keys,
-    RAYDIUM_AMM_V4_PROGRAM_ID,
+    extract_program_ids_from_transaction, resolve_full_account_keys, ConfidenceReasons,
+    DexSwapV1Builder, TxFacts, RAYDIUM_AMM_V4_PROGRAM_ID,
 };
 
 const FIXTURES_DIR: &str = "tests/fixtures";
@@ -83,7 +82,8 @@ mod tx_facts_tests {
         assert!(!facts.token_balance_deltas.is_empty());
 
         // Trader should have negative (in) and positive (out) deltas
-        let trader_deltas = facts.token_deltas_for_owner("TraderWallet1111111111111111111111111111");
+        let trader_deltas =
+            facts.token_deltas_for_owner("TraderWallet1111111111111111111111111111");
         assert_eq!(trader_deltas.len(), 2);
 
         // One negative (SOL in), one positive (USDC out)
@@ -341,7 +341,10 @@ mod multi_hop_tests {
             .pointer("/meta/innerInstructions/0/instructions")
             .and_then(|v| v.as_array());
         assert!(inner_ixs.is_some());
-        assert!(inner_ixs.unwrap().len() >= 2, "Should have multiple inner ixs");
+        assert!(
+            inner_ixs.unwrap().len() >= 2,
+            "Should have multiple inner ixs"
+        );
     }
 
     #[test]
@@ -350,7 +353,8 @@ mod multi_hop_tests {
         let facts = TxFacts::from_json(&tx, "multi_hop_sig", 250000100);
 
         // Trader should have SOL in, USDC out (intermediate mSOL is 0->0 from their POV)
-        let trader_deltas = facts.token_deltas_for_owner("MultiHopTrader111111111111111111111111111");
+        let trader_deltas =
+            facts.token_deltas_for_owner("MultiHopTrader111111111111111111111111111");
 
         // Should see input (SOL decrease) and output (USDC increase)
         let sol_delta = trader_deltas
