@@ -31,7 +31,11 @@ async fn main() -> Result<()> {
     );
     info!(
         "endpoint={} tls={} commitment={:?} include_failed={} required_accounts={:?}",
-        cfg.geyser_endpoint, cfg.geyser_use_tls, cfg.commitment, cfg.include_failed, cfg.required_accounts
+        cfg.geyser_endpoint,
+        cfg.geyser_use_tls,
+        cfg.commitment,
+        cfg.include_failed,
+        cfg.required_accounts
     );
 
     let producer = kafka::create_producer(&cfg.kafka_broker)?;
