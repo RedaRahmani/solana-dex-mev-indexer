@@ -72,6 +72,7 @@ async fn main() -> Result<()> {
             cfg.raydium_amm_v4_program_id
         );
         info!("  out_swaps_topic={}", cfg.out_swaps_topic);
+        info!("  out_swaps_v2_topic={}", cfg.out_swaps_v2_topic);
         info!("  swaps_explain={}", cfg.swaps_explain);
         info!("  swaps_explain_limit={}", cfg.swaps_explain_limit);
     } else {
@@ -79,7 +80,10 @@ async fn main() -> Result<()> {
     }
 
     let consumer = kafka::create_consumer(&cfg.kafka_broker, &cfg.consumer_group)?;
-    info!("consumer created (group={}, in_topic={})", cfg.consumer_group, cfg.in_topic);
+    info!(
+        "consumer created (group={}, in_topic={})",
+        cfg.consumer_group, cfg.in_topic
+    );
     consumer.subscribe(&[&cfg.in_topic])?;
 
     let producer = kafka::create_producer(&cfg.kafka_broker)?;
@@ -100,12 +104,16 @@ async fn main() -> Result<()> {
     let swaps_detected = AtomicU64::new(0);
     let swaps_emitted = AtomicU64::new(0);
     let swaps_publish_errors = AtomicU64::new(0);
+    let gold_swaps_detected = AtomicU64::new(0);
+    let gold_swaps_emitted = AtomicU64::new(0);
+    let gold_swaps_publish_errors = AtomicU64::new(0);
 
     // Schema validation: log first message of each type (rate-limited)
     let mut logged_raw_tx_schema = false;
     let mut logged_sol_delta_schema = false;
     let mut logged_token_delta_schema = false;
     let mut logged_swap_schema = false;
+    let mut logged_gold_swap_schema = false;
 
     // Retry budget: track failure count per signature to prevent poison-pill stalls
     let mut failure_counts: HashMap<String, u32> = HashMap::new();
@@ -328,11 +336,11 @@ async fn main() -> Result<()> {
                 if !cfg.raydium_amm_v4_program_id.is_empty() {
                     // Recompute program_ids from fetched tx for validation (handles v0+ALT)
                     let recomputed_program_ids = schema::extract_program_ids_from_transaction(&tx);
-                    
+
                     // Check if tx is v0 with loadedAddresses for observability
                     let has_loaded_addresses = tx.pointer("/meta/loadedAddresses").is_some();
                     let tx_version = tx.pointer("/version").and_then(|v| v.as_u64());
-                    
+
                     // Determine if we should attach explain (respect limit)
                     let should_explain = cfg.swaps_explain
                         && swaps_emitted.load(Ordering::Relaxed) < cfg.swaps_explain_limit as u64;
@@ -381,7 +389,8 @@ async fn main() -> Result<()> {
                         None => {
                             // Observability: log when program gate fails for v0+ALT tx
                             if has_loaded_addresses && tx_version == Some(0) {
-                                if !recomputed_program_ids.contains(&cfg.raydium_amm_v4_program_id) {
+                                if !recomputed_program_ids.contains(&cfg.raydium_amm_v4_program_id)
+                                {
                                     debug!(
                                         "v0+ALT tx sig={} missing Raydium in recomputed program_ids (possible ALT extraction issue)",
                                         evt.signature
@@ -390,6 +399,59 @@ async fn main() -> Result<()> {
                                     debug!(
                                         "v0+ALT tx sig={} has Raydium but failed swap detection (multi-hop or invalid pattern)",
                                         evt.signature
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    // Gold swap detection (DexSwapV1 via TxFacts)
+                    // Dual-publish to v2 topic alongside legacy path
+                    let tx_facts = schema::TxFacts::from_json(&tx, &evt.signature, evt.slot);
+                    let gold_swaps = detectors::raydium_v4_gold::parse_raydium_v4_swaps(
+                        &tx_facts,
+                        &evt.chain,
+                        evt.index_in_block,
+                        should_explain,
+                    );
+
+                    if !gold_swaps.is_empty() {
+                        gold_swaps_detected.fetch_add(gold_swaps.len() as u64, Ordering::Relaxed);
+
+                        for gold_swap in &gold_swaps {
+                            // Log first gold swap schema
+                            if !logged_gold_swap_schema {
+                                let schema_sample =
+                                    serde_json::to_string_pretty(gold_swap).unwrap_or_default();
+                                info!(
+                                    "🔍 First DexSwapV1 (gold) schema sample:\n{}",
+                                    schema_sample
+                                );
+                                logged_gold_swap_schema = true;
+                            }
+
+                            match sinks::dex_swap::send_dex_swap_v1(
+                                &producer,
+                                &cfg.out_swaps_v2_topic,
+                                gold_swap,
+                            )
+                            .await
+                            {
+                                Ok(_) => {
+                                    gold_swaps_emitted.fetch_add(1, Ordering::Relaxed);
+                                    debug!(
+                                        "gold swap emitted: sig={} pool_id={:?} hop={} confidence={}",
+                                        gold_swap.signature,
+                                        gold_swap.pool_id,
+                                        gold_swap.hop_index,
+                                        gold_swap.confidence
+                                    );
+                                }
+                                Err(e) => {
+                                    gold_swaps_publish_errors.fetch_add(1, Ordering::Relaxed);
+                                    warn!(
+                                        "gold swap publish failed sig={} err={:?}",
+                                        evt.signature, e
                                     );
                                 }
                             }
@@ -412,8 +474,11 @@ async fn main() -> Result<()> {
                     let swaps_det = swaps_detected.load(Ordering::Relaxed);
                     let swaps_emit = swaps_emitted.load(Ordering::Relaxed);
                     let swaps_err = swaps_publish_errors.load(Ordering::Relaxed);
+                    let gold_det = gold_swaps_detected.load(Ordering::Relaxed);
+                    let gold_emit = gold_swaps_emitted.load(Ordering::Relaxed);
+                    let gold_err = gold_swaps_publish_errors.load(Ordering::Relaxed);
                     info!(
-                        "stats: processed={} sol_deltas={} token_deltas={} total_produced={} errors={} dlq_sent={} pending_retries={} swaps_detected={} swaps_emitted={} swap_errors={}",
+                        "stats: processed={} sol_deltas={} token_deltas={} total_produced={} errors={} dlq_sent={} pending_retries={} swaps_detected={} swaps_emitted={} swap_errors={} gold_detected={} gold_emitted={} gold_errors={}",
                         proc_count,
                         sol_prod,
                         tok_prod,
@@ -423,7 +488,10 @@ async fn main() -> Result<()> {
                         pending_retries,
                         swaps_det,
                         swaps_emit,
-                        swaps_err
+                        swaps_err,
+                        gold_det,
+                        gold_emit,
+                        gold_err
                     );
                 }
             }

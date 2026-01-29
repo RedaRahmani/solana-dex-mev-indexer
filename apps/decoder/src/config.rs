@@ -15,6 +15,7 @@ pub struct Config {
     pub out_sol_deltas_topic: String,
     pub out_token_deltas_topic: String,
     pub out_swaps_topic: String,
+    pub out_swaps_v2_topic: String,
     pub swaps_explain: bool,
     pub swaps_explain_limit: u32,
     pub raydium_amm_v4_program_id: String,
@@ -95,6 +96,9 @@ pub fn load() -> Result<Config> {
     let out_swaps_topic = env::var("KAFKA_OUT_SWAPS_TOPIC")
         .unwrap_or_else(|_| profile.default_kafka_topic_swaps().to_string());
 
+    let out_swaps_v2_topic = env::var("KAFKA_OUT_SWAPS_V2_TOPIC")
+        .unwrap_or_else(|_| profile.default_kafka_topic_swaps_v2().to_string());
+
     let swaps_explain = parse_bool(env::var("SWAPS_EXPLAIN").ok(), false);
     let swaps_explain_limit = env::var("SWAPS_EXPLAIN_LIMIT")
         .ok()
@@ -135,6 +139,7 @@ pub fn load() -> Result<Config> {
         out_sol_deltas_topic,
         out_token_deltas_topic,
         out_swaps_topic,
+        out_swaps_v2_topic,
         swaps_explain,
         swaps_explain_limit,
         raydium_amm_v4_program_id,
