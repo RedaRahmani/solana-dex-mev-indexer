@@ -12,7 +12,11 @@ pub enum Profile {
 
 impl Profile {
     pub fn from_env() -> Result<Self> {
-        match env::var("PROFILE").unwrap_or_else(|_| "local".to_string()).to_lowercase().as_str() {
+        match env::var("PROFILE")
+            .unwrap_or_else(|_| "local".to_string())
+            .to_lowercase()
+            .as_str()
+        {
             "local" | "" => Ok(Profile::Local),
             "mainnet" => Ok(Profile::Mainnet),
             other => Err(anyhow!("Invalid PROFILE={other}. Use 'local' or 'mainnet'")),
@@ -65,6 +69,13 @@ impl Profile {
         match self {
             Profile::Local => "sol_token_balance_deltas",
             Profile::Mainnet => "sol_token_balance_deltas_mainnet",
+        }
+    }
+
+    pub fn default_kafka_topic_swaps_v2(&self) -> &'static str {
+        match self {
+            Profile::Local => "sol_swaps_v2",
+            Profile::Mainnet => "sol_swaps_v2_mainnet",
         }
     }
 }
@@ -151,14 +162,26 @@ mod tests {
 
     #[test]
     fn test_profile_defaults() {
-        assert_eq!(Profile::Local.default_geyser_endpoint(), "http://127.0.0.1:10000");
-        assert_eq!(Profile::Mainnet.default_geyser_endpoint(), "https://solana-rpc.parafi.tech:10443");
+        assert_eq!(
+            Profile::Local.default_geyser_endpoint(),
+            "http://127.0.0.1:10000"
+        );
+        assert_eq!(
+            Profile::Mainnet.default_geyser_endpoint(),
+            "https://solana-rpc.parafi.tech:10443"
+        );
 
         assert_eq!(Profile::Local.default_rpc_url(), "http://127.0.0.1:8899");
-        assert_eq!(Profile::Mainnet.default_rpc_url(), "https://solana-rpc.parafi.tech");
+        assert_eq!(
+            Profile::Mainnet.default_rpc_url(),
+            "https://solana-rpc.parafi.tech"
+        );
 
         assert_eq!(Profile::Local.default_kafka_topic_raw_txs(), "sol_raw_txs");
-        assert_eq!(Profile::Mainnet.default_kafka_topic_raw_txs(), "sol_raw_txs_mainnet");
+        assert_eq!(
+            Profile::Mainnet.default_kafka_topic_raw_txs(),
+            "sol_raw_txs_mainnet"
+        );
     }
 
     #[test]
@@ -169,13 +192,20 @@ mod tests {
 
     #[test]
     fn test_validate_mainnet_url_rejects_devnet() {
-        assert!(validate_mainnet_url(Profile::Mainnet, "https://api.devnet.solana.com", "RPC").is_err());
-        assert!(validate_mainnet_url(Profile::Mainnet, "https://api.testnet.solana.com", "RPC").is_err());
+        assert!(
+            validate_mainnet_url(Profile::Mainnet, "https://api.devnet.solana.com", "RPC").is_err()
+        );
+        assert!(
+            validate_mainnet_url(Profile::Mainnet, "https://api.testnet.solana.com", "RPC")
+                .is_err()
+        );
     }
 
     #[test]
     fn test_validate_mainnet_url_accepts_parafi() {
-        assert!(validate_mainnet_url(Profile::Mainnet, "https://solana-rpc.parafi.tech", "RPC").is_ok());
+        assert!(
+            validate_mainnet_url(Profile::Mainnet, "https://solana-rpc.parafi.tech", "RPC").is_ok()
+        );
     }
 
     #[test]

@@ -9,8 +9,8 @@ pub use swap::SwapEvent;
 
 // Profile (local/mainnet) configuration
 pub use profile::{
-    Profile, SOLANA_MAINNET_GENESIS_HASH, url_requires_tls, validate_mainnet_url,
-    verify_mainnet_genesis,
+    url_requires_tls, validate_mainnet_url, verify_mainnet_genesis, Profile,
+    SOLANA_MAINNET_GENESIS_HASH,
 };
 
 // ALT resolution utilities
